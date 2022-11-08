@@ -50,9 +50,8 @@ data %>%
 
 ```{r selectResponders}
 data %>% 
-  group_by(ID, name, class) %>% 
-  arrange(desc(timestamp)) %>% 
-  slice(1) %>% 
+  group_by(ID) %>% 
+  slice_max(timestamp) %>% 
   ungroup() -> data
 ```
 
@@ -122,12 +121,11 @@ plot.countries
 org.factor <- c("Clinical/Hospital Laboratory", "Commercial Laboratory", "Academic/Research Laboratory", "Other")
 data %>% 
   filter(name == "organization") %>% 
-  select(ID, value) %>% View()
-  mutate(listOrga = str_split(value, pattern = ";")) %>% 
-  unnest(listOrga) %>% 
-  mutate(listOrga = ifelse(listOrga %in% org.factor, listOrga, "Other")) %>% 
+  select(ID, value) %>% 
+  distinct() %>% 
+  mutate(value = ifelse(value %in% org.factor, value, "Other")) %>% 
   mutate(count = 1) %>% 
-  pivot_wider(names_from = listOrga, values_from = count, values_fill = 0) %>% 
+  pivot_wider(names_from = value, values_from = count, values_fill = 0) %>% 
   as.data.frame() %>% 
   upset(nintersects = NA, order.by = "freq", point.size = 5, mainbar.y.label = "", sets.x.label = "# Responses", text.scale = 2) 
 
