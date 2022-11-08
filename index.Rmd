@@ -68,6 +68,7 @@ data %>%
 palContinents <- c(Europe = "#283F46", `North America` = "#3aada8", Other = "gray", Worldwide = "#8B0000")
 
 textSize <- 24
+cutoff <- 0.75
 ```
 
 Results
@@ -182,8 +183,9 @@ data.essentiality %>%
             lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
   ylim(0, 1)+
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   theme_pubclean(base_size = textSize*2) + 
-  theme(legend.position = "top") 
+  theme(legend.position = "top", legend.title=element_blank()) 
 ```
 
 ### Overview of variant reporting
@@ -201,11 +203,12 @@ data.essentiality %>%
             fill = "continent", 
             rotate = T, 
             label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 1,
+            lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
   ylim(0, 1)+
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   theme_pubclean(base_size = textSize*2) + 
-  theme(legend.position = "top") 
+  theme(legend.position = "top", legend.title=element_blank()) 
 ```
 
 ### Overview of functional assessment
@@ -224,11 +227,12 @@ data.essentiality %>%
             fill = "continent", 
             rotate = T, 
             label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 1,
+            lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
   ylim(0, 1)+
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   theme_pubclean(base_size = textSize*2) + 
-  theme(legend.position = "top") 
+  theme(legend.position = "top", legend.title=element_blank()) 
 ```
 
 ### Treatment recommendations
@@ -247,26 +251,36 @@ data.essentiality %>%
             fill = "continent", 
             rotate = T, 
             label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 1,
+            lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
   ylim(0, 1)+
-  theme_pubclean(base_size = textSize*2) + 
-  theme(legend.position = "top") 
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  theme_pubclean(base_size = textSize*2) +
+  theme(legend.position = "top", legend.title=element_blank()) 
 ```
 
 ### Clinical trials
 ```{r plotClinicalTrials, fig.width=40, fig.height=20}
 data.essentiality %>% 
   filter(group == "clinical trial") %>% 
+  filter(continent == "Worldwide") %>% 
+  arrange(normEssent) %>% 
+  pull(name) -> listPlot
+
+
+data.essentiality %>% 
+  filter(group == "clinical trial") %>% 
+  mutate(name = factor(name, levels = listPlot)) %>% 
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
             label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 1,
+            lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
   ylim(0, 1)+
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   theme_pubclean(base_size = textSize*2) + 
-  theme(legend.position = "top")
+  theme(legend.position = "top", legend.title=element_blank())
 ```
 
 Data
@@ -305,6 +319,7 @@ SE = \frac{(E+ 0.5\cdot P − N)}{\text{#responses}}
 $$
 
 Email addresses were removed before uploading the final data set. 
-In total `r nrDoubleResponders` participants filled out the survey twice over the course of the project. For the main analysis the most recent response has been selected. 
 
-A comparison of consistency between is analysed separately.
+In total `r nrDoubleResponders` participants filled out the survey twice over the course of the project. For the main analysis the most recent response has been selected. A comparison of consistency between is analysed separately.
+
+A cutoff of `r cutoff` has been defined to identify an elementary NGS report. Based on the results coming from different regions, the elements can and should be adjusted.
