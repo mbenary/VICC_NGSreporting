@@ -1,0 +1,312 @@
+---
+title: "An International Landscape of Cancer NGS Reporting Practices"
+output: 
+  flexdashboard::flex_dashboard:
+    theme:
+      bg: "#fdfdfd"
+      fg: "#18252b" 
+      primary: "#18252b"
+      base_font:
+        google: Prompt
+      code_font:
+        google: JetBrains Mono
+    orientation: columns
+    vertical_layout: fill
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(ggpubr)
+library(ggpmisc)
+library(DT)
+library(UpSetR)
+# Install thematic and un-comment for themed static plots (i.e., ggplot2)
+# thematic::thematic_rmd()
+```
+
+```{css, echo=FALSE}
+.fluid-row {
+  font-size: 5.9vw;
+}
+```
+
+```{r load-data, include=FALSE}
+data <- read_csv("data/NGSreportElementsClean.csv")
+```
+
+```{r doubleResponders, include=FALSE}
+data %>% 
+  select(timestamp, ID) %>% 
+  distinct() %>% 
+  group_by(ID) %>% 
+  filter(n()>1) %>% 
+  select(ID) %>% 
+  distinct() %>% 
+  nrow() -> nrDoubleResponders
+```
+
+```{r selectResponders}
+data %>% 
+  group_by(ID, name, class) %>% 
+  arrange(desc(timestamp)) %>% 
+  slice(1) %>% 
+  ungroup() -> data
+```
+
+```{r nrResponders}
+data %>% 
+  select(continent, ID) %>% 
+  distinct() %>% 
+  count(continent) %>% 
+  pivot_wider(names_from = "continent", values_from = "n") -> nrResp
+```
+
+
+```{r colorScheme}
+palContinents <- c(Europe = "#283F46", `North America` = "#3aada8", Other = "gray", Worldwide = "#8B0000")
+
+textSize <- 24
+```
+
+Results
+=====================================  
+
+Results of Next Generation Sequencing (NGS) are increasingly incorporated in routine clinical oncology. Multiple guidelines and standards have been issued globally to support clinical NGS variant interpretation and are currently integrated in different ways into cancer NGS reports around the world. However, a thorough capture of how these guidelines are being translated in real-world laboratory  reporting  has not yet been clearly studied. To this end, the Variant Interpretation for Cancer Consortium Virtual Molecular Tumor Board (VICC-VMTB), in collaboration with the Cancer Genomics Consortium (CGC) and the ClinGen Somatic Clinical Domain Working Group (CDWG), distributed a comprehensive survey regarding reporting practices for cancer NGS testing worldwide to identify essential elements and their actual occurrence in NGS reports.
+
+
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Global representation of survey responses
+
+```{r participants, fig.width=20, fig.height=10, fig.cap=paste("Overview of survey responses across the globe. Most respondents represented laboratories in North America (n = ", nrResp$`North America`,") and Europe (n = ", nrResp$Europe, "), with additional responses from other countries (n = ", nrResp$Other, "). ")}
+data %>% 
+  select(region, ID, continent) %>% 
+  distinct() %>% 
+  group_by(region, continent) %>% 
+  count() -> sum.country
+
+mapdata <- map_data("world")
+
+mapdata %>% 
+  left_join(sum.country, by = "region") %>% 
+  ggplot(aes(x = long, y = lat, group = group)) + geom_polygon(aes(fill = n), color = "black") + 
+  scale_fill_continuous(low="thistle2", high="darkred", 
+                        guide="colorbar",na.value="lightgray", 
+                        name="# Responses",
+                        breaks=seq(0, 20, by = 5)) -> plot.countries
+
+# add bar-plot with country not given
+sum.country %>% 
+  filter(is.na(region)) %>% 
+  ungroup() %>% 
+  select(-continent) %>% 
+  mutate(region = str_replace_na("Country not specified")) %>% 
+  pivot_wider(names_from = "region", values_from = "n")-> na.region
+
+plot.countries +
+  annotate("table", x = -180, y = -70, label = list(cbind(na.region))) +
+  theme_transparent(base_size = textSize) +
+  theme(legend.position = "bottom") -> plot.countries
+
+plot.countries
+```
+
+### Background of participants
+
+```{r institutes}
+org.factor <- c("Clinical/Hospital Laboratory", "Commercial Laboratory", "Academic/Research Laboratory", "Other")
+data %>% 
+  filter(name == "organization") %>% 
+  select(ID, value) %>% View()
+  mutate(listOrga = str_split(value, pattern = ";")) %>% 
+  unnest(listOrga) %>% 
+  mutate(listOrga = ifelse(listOrga %in% org.factor, listOrga, "Other")) %>% 
+  mutate(count = 1) %>% 
+  pivot_wider(names_from = listOrga, values_from = count, values_fill = 0) %>% 
+  as.data.frame() %>% 
+  upset(nintersects = NA, order.by = "freq", point.size = 5, mainbar.y.label = "", sets.x.label = "# Responses", text.scale = 2) 
+
+```
+
+Column {data-width=650 .tabset}
+-----------------------------------------------------------------------
+
+```{r calcEssentiality}
+numeric.levels <- c(`No response` = 0, `Not Recommended` = -1, `Preferred, non-essential` = .5, `Essential` = 1)
+responses.essential <- c("No response", "Not Recommended", "Preferred, non-essential", "Essential")
+
+data %>% 
+  filter(class == "Essentiality") %>% 
+  pivot_wider(names_from = "class", values_from = "value") %>% 
+  unnest(Essentiality) %>% 
+  replace_na(list(Essentiality = "No response")) %>% 
+  mutate(Essentiality = factor(Essentiality, levels = responses.essential)) %>%
+  mutate(quantEssent = recode(Essentiality, !!!numeric.levels)) %>% 
+  group_by(continent, name, group, section) %>% 
+  summarise(sumEssent = sum(quantEssent),
+            totEssent = sum(quantEssent != 0),
+            normEssent = sumEssent/totEssent) -> data.essentiality
+
+data %>% 
+  filter(class == "Essentiality") %>% 
+  pivot_wider(names_from = "class", values_from = "value") %>% 
+  unnest(Essentiality) %>% 
+  replace_na(list(Essentiality = "No response")) %>% 
+  mutate(Essentiality = factor(Essentiality, levels = responses.essential)) %>%
+  mutate(quantEssent = recode(Essentiality, !!!numeric.levels)) %>% 
+  group_by(name, group, section) %>% 
+  summarise(sumEssent = sum(quantEssent),
+            totEssent = sum(quantEssent != 0),
+            normEssent = sumEssent/totEssent) %>% 
+  mutate(continent = "Worldwide") %>% 
+  bind_rows(data.essentiality) -> data.essentiality
+```
+
+### General Information on NGS analysis
+```{r plotOverview, fig.width=40, fig.height=20}
+data.essentiality %>% 
+  filter(section == "Overview", continent == "Worldwide") %>% 
+  arrange(normEssent) %>% 
+  pull(name) -> listPlot
+
+data.essentiality %>% 
+  filter(section == "Overview") %>% 
+  mutate(name = factor(name, levels = listPlot)) %>% 
+  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
+            fill = "continent", 
+            rotate = T, 
+            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 2,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+  ylim(0, 1)+
+  theme_pubclean(base_size = textSize*2) + 
+  theme(legend.position = "top") 
+```
+
+### Overview of variant reporting
+```{r plotVariants, fig.width=40, fig.height=20}
+data.essentiality %>% 
+  filter(section == "Variants") %>% 
+  filter(continent == "Worldwide") %>% 
+  arrange(normEssent) %>% 
+  pull(name) -> listPlot
+
+data.essentiality %>% 
+  filter(section == "Variants") %>% 
+  mutate(name = factor(name, levels = listPlot)) %>% 
+  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
+            fill = "continent", 
+            rotate = T, 
+            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 1,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+  ylim(0, 1)+
+  theme_pubclean(base_size = textSize*2) + 
+  theme(legend.position = "top") 
+```
+
+### Overview of functional assessment
+```{r plotFunctional, fig.width=40, fig.height=20}
+data.essentiality %>% 
+  filter(section == "Functional") %>% 
+  filter(continent == "Worldwide") %>% 
+  arrange(normEssent) %>% 
+  pull(name) -> listPlot
+
+
+data.essentiality %>% 
+  filter(section == "Functional") %>% 
+  mutate(name = factor(name, levels = listPlot)) %>% 
+  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
+            fill = "continent", 
+            rotate = T, 
+            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 1,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+  ylim(0, 1)+
+  theme_pubclean(base_size = textSize*2) + 
+  theme(legend.position = "top") 
+```
+
+### Treatment recommendations
+```{r plotTreatments, fig.width=40, fig.height=20}
+data.essentiality %>% 
+  filter(section == "Treatment") %>% 
+  filter(continent == "Worldwide") %>% 
+  arrange(normEssent) %>% 
+  pull(name) -> listPlot
+
+
+data.essentiality %>% 
+  filter(section == "Treatment") %>% 
+  mutate(name = factor(name, levels = listPlot)) %>% 
+  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
+            fill = "continent", 
+            rotate = T, 
+            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 1,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+  ylim(0, 1)+
+  theme_pubclean(base_size = textSize*2) + 
+  theme(legend.position = "top") 
+```
+
+### Clinical trials
+```{r plotClinicalTrials, fig.width=40, fig.height=20}
+data.essentiality %>% 
+  filter(group == "clinical trial") %>% 
+  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
+            fill = "continent", 
+            rotate = T, 
+            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 1,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+  ylim(0, 1)+
+  theme_pubclean(base_size = textSize*2) + 
+  theme(legend.position = "top")
+```
+
+Data
+=====================================  
+### Participants
+
+```{r tableParticipants}
+sum.country %>% 
+  arrange(desc(n)) %>% 
+  datatable(caption = "Overview of the number of survey responses for each country.")
+```
+
+### Essentiality
+```{r tableEssentiality}
+data.essentiality %>% 
+  datatable(caption = "Overview of the essentiality calculated by continent.")
+```
+
+
+Methods
+===================================== 
+
+Differences in country names were detected manually and harmonized to allow grouping.  Questions were organized into groups, based on topic of the presented elements. These groups include
+
+- general information,
+- variant information with a focus on SNVs and small indels,
+- functional annotation,
+- clinical information,
+- aspects of clinical trials, and 
+- more complex molecular profiles.
+
+Each element of an NGS report can be defined as a) essential (E), b) preferred, but not essential (P) or c) not recommended (N). The responses are summarized as a score of essentiality (SE), which is normalized between the range of -1 (contra-productive) and 1 (essential): 
+
+$$
+SE = \frac{(E+ 0.5\cdot P − N)}{\text{#responses}}
+$$
+
+Email addresses were removed before uploading the final data set. 
+In total `r nrDoubleResponders` participants filled out the survey twice over the course of the project. For the main analysis the most recent response has been selected. 
+
+A comparison of consistency between is analysed separately.
