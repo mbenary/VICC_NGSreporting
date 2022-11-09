@@ -21,6 +21,7 @@ library(flexdashboard)
 library(tidyverse)
 library(ggpubr)
 library(ggpmisc)
+library(ggrepel)
 library(DT)
 library(UpSetR)
 # Install thematic and un-comment for themed static plots (i.e., ggplot2)
@@ -118,7 +119,7 @@ plot.countries
 
 ### Background of participants
 
-```{r institutes}
+```{r institutes, fig.width=20, fig.height=10}
 org.factor <- c("Clinical/Hospital Laboratory", "Commercial Laboratory", "Academic/Research Laboratory", "Other")
 data %>% 
   filter(name == "organization") %>% 
@@ -131,6 +132,30 @@ data %>%
   upset(nintersects = NA, order.by = "freq", point.size = 5, mainbar.y.label = "", sets.x.label = "# Responses", text.scale = 2) 
 
 ```
+
+
+### Types of tumors analysed
+```{r plotTumortypes, fig.width=20, fig.height=10}
+cancer.factor <- rev(c("Solid Tumor", "Hematologic Malignancies", 
+                       "Both", "Both (only pediatric cancer)", "Other", "Not specified"))
+data %>% 
+  filter(name == "cancer_type") %>% 
+  select(ID, value) %>% 
+  distinct() %>% 
+  group_by(value) %>% 
+  replace_na(list(value = "Not specified")) %>% 
+  mutate(value = ifelse(value %in% cancer.factor, value, "Other")) %>% 
+  count() %>% 
+  mutate(cancer_type = factor(value, levels = cancer.factor)) %>% 
+  ggbarplot(x = "cancer_type", y = "n", fill = "n", 
+            ylab = "# Responses", xlab = "", rotate = T) +
+  scale_fill_continuous(low="thistle2", high="darkred") +
+  theme_pubclean(base_size = textSize) +
+  theme(legend.position = "none") -> plot.cancer
+plot.cancer
+
+```
+
 
 Column {data-width=650 .tabset}
 -----------------------------------------------------------------------
@@ -282,6 +307,116 @@ data.essentiality %>%
   theme_pubclean(base_size = textSize*2) + 
   theme(legend.position = "top", legend.title=element_blank())
 ```
+
+Reporting
+====================================
+Row
+-------------------------------------
+```{r calcReported}
+data %>% 
+  filter(class == "Report") %>% 
+  group_by(continent, name, group, section) %>% 
+  count(value) %>% 
+  pivot_wider(names_from = value, values_from = n) %>% 
+  left_join(nrResp %>% pivot_longer(everything(), names_to = "continent")) %>% 
+  mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
+         `No Response` = value - sumResponses) %>% 
+  mutate(percReported = Reported / value) -> data.reported
+
+data %>% 
+  filter(class == "Report") %>% 
+  group_by(name, group, section) %>% 
+  count(value) %>% 
+  pivot_wider(names_from = value, values_from = n) %>% 
+  mutate(value = nrResp %>% as_vector() %>% sum()) %>% 
+  mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
+         `No Response` = value - sumResponses) %>% 
+  mutate(percReported = Reported / value) %>% 
+  mutate(continent = "Worldwide") %>% 
+  bind_rows(data.reported) -> data.reported
+  
+```
+    
+### General Information on NGS analysis
+    
+```{r reportOverview, fig.width=20, fig.height=10}
+data.essentiality %>% 
+  filter(section == "Overview") %>% 
+  left_join(data.reported, by = c("group", "section", "name", "continent")) %>% 
+  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) %>% 
+  ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
+            color = "continent", size = 4,
+            xlab = "Score of Essentiality", ylab = "% Reported") + 
+  lims(x = c(0, 1), y = c(0,1))+
+  geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
+                   show.legend = F, size = textSize/3)+
+  theme_pubclean(base_size = textSize*2) + 
+  theme(legend.position = "top", legend.title = element_blank()) 
+
+```
+ 
+### Overview of variant reporting
+    
+```{r reportVariants, fig.width=20, fig.height=10}
+data.essentiality %>% 
+  filter(section == "Variants") %>% 
+  left_join(data.reported, by = c("group", "section", "name", "continent")) %>% 
+  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) %>% 
+  ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
+            color = "continent", size = 4,
+            xlab = "Score of Essentiality", ylab = "% Reported") + 
+  lims(x = c(0, 1), y = c(0,1))+
+  geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
+                   show.legend = F, size = textSize/3)+
+  theme_pubclean(base_size = textSize*2) + 
+  theme(legend.position = "top", legend.title = element_blank()) 
+
+```
+
+Row
+-------------------------------------    
+
+### Overview of functional assessment
+    
+```{r reportFunctional, fig.width=20, fig.height=10}
+data.essentiality %>% 
+  filter(section == "Functional") %>% 
+  left_join(data.reported, by = c("group", "section", "name", "continent")) %>% 
+  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) %>% 
+  ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
+            color = "continent", size = 4,
+            xlab = "Score of Essentiality", ylab = "% Reported") + 
+  lims(x = c(0, 1), y = c(0,1))+
+  geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
+                   show.legend = F, size = textSize/3)+
+  theme_pubclean(base_size = textSize*2) + 
+  theme(legend.position = "top", legend.title = element_blank()) 
+
+```
+
+### Treatment recommendations
+
+    
+```{r reportTreatment, fig.width=20, fig.height=10}
+data.essentiality %>% 
+  filter(section == "Treatment") %>% 
+  left_join(data.reported, by = c("group", "section", "name", "continent")) %>% 
+  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) %>% 
+  ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
+            color = "continent", size = 4,
+            xlab = "Score of Essentiality", ylab = "% Reported") + 
+  lims(x = c(0, 1), y = c(0,1))+
+  geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
+                   show.legend = F, size = textSize/3)+
+  theme_pubclean(base_size = textSize*2) + 
+  theme(legend.position = "top", legend.title = element_blank()) 
+
+```
+
 
 Data
 =====================================  
