@@ -24,6 +24,7 @@ library(ggpmisc)
 library(ggrepel)
 library(DT)
 library(UpSetR)
+library(cowplot)
 # Install thematic and un-comment for themed static plots (i.e., ggplot2)
 # thematic::thematic_rmd()
 ```
@@ -196,11 +197,11 @@ data %>%
 data.essentiality %>% 
   filter(section == "Overview", continent == "Worldwide") %>% 
   arrange(normEssent) %>% 
-  pull(name) -> listPlot
+  mutate(label = paste0(name, ", SE = ", round(normEssent, 2))) -> orderOverview
 
 data.essentiality %>% 
   filter(section == "Overview") %>% 
-  mutate(name = factor(name, levels = listPlot)) %>% 
+  mutate(name = factor(name, levels = orderOverview$name)) %>% 
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
@@ -219,11 +220,11 @@ data.essentiality %>%
   filter(section == "Variants") %>% 
   filter(continent == "Worldwide") %>% 
   arrange(normEssent) %>% 
-  pull(name) -> listPlot
+  mutate(label = paste0(name, ", SE = ", round(normEssent, 2))) -> orderVariants
 
 data.essentiality %>% 
   filter(section == "Variants") %>% 
-  mutate(name = factor(name, levels = listPlot)) %>% 
+  mutate(name = factor(name, levels = orderVariants$name)) %>% 
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
@@ -242,12 +243,12 @@ data.essentiality %>%
   filter(section == "Functional") %>% 
   filter(continent == "Worldwide") %>% 
   arrange(normEssent) %>% 
-  pull(name) -> listPlot
+  mutate(label = paste0(name, ", SE = ", round(normEssent, 2))) -> orderFunctional
 
 
 data.essentiality %>% 
   filter(section == "Functional") %>% 
-  mutate(name = factor(name, levels = listPlot)) %>% 
+  mutate(name = factor(name, levels = orderFunctional$name)) %>% 
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
@@ -266,12 +267,12 @@ data.essentiality %>%
   filter(section == "Treatment") %>% 
   filter(continent == "Worldwide") %>% 
   arrange(normEssent) %>% 
-  pull(name) -> listPlot
+  mutate(label = paste0(name, ", SE = ", round(normEssent, 2))) -> orderTreatment
 
 
 data.essentiality %>% 
   filter(section == "Treatment") %>% 
-  mutate(name = factor(name, levels = listPlot)) %>% 
+  mutate(name = factor(name, levels = orderTreatment$name)) %>% 
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
@@ -313,6 +314,7 @@ Reporting
 Row
 -------------------------------------
 ```{r calcReported}
+responses.reported <- c("No Response", "Not Reported", "Reported")
 data %>% 
   filter(class == "Report") %>% 
   group_by(continent, name, group, section) %>% 
@@ -346,15 +348,29 @@ data.essentiality %>%
   mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) %>% 
   ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
             color = "continent", size = 4,
-            xlab = "Score of Essentiality", ylab = "% Reported") + 
+            xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
   lims(x = c(0, 1), y = c(0,1))+
   geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
-                   show.legend = F, size = textSize/3)+
-  theme_pubclean(base_size = textSize*2) + 
-  theme(legend.position = "top", legend.title = element_blank()) 
+                   show.legend = F, size = textSize/4)+
+  theme_pubclean(base_size = textSize/2) + 
+  theme(legend.position = "none") -> p1
 
+data.reported %>% 
+  filter(section == "Overview") %>% 
+  pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") %>% 
+  mutate(percent = count/value) %>% 
+  mutate(name = factor(name, levels = rev(orderOverview$name))) %>% 
+  ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderOverview$label)),
+            ylab = "% Reported", xlab = "") + 
+  theme_pubclean(base_size = textSize/2) +
+  theme(legend.title = element_blank()) -> p2
+
+plot_grid(p1, p2, align = "hv", axis = "tblr")
 ```
+ 
+
  
 ### Overview of variant reporting
     
@@ -365,13 +381,26 @@ data.essentiality %>%
   mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) %>% 
   ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
             color = "continent", size = 4,
-            xlab = "Score of Essentiality", ylab = "% Reported") + 
+            xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
   lims(x = c(0, 1), y = c(0,1))+
   geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
                    show.legend = F, size = textSize/3)+
-  theme_pubclean(base_size = textSize*2) + 
-  theme(legend.position = "top", legend.title = element_blank()) 
+  theme_pubclean(base_size = textSize/2) + 
+  theme(legend.position = "none") -> p1
+
+data.reported %>% 
+  filter(section == "Variants") %>% 
+  pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") %>% 
+  mutate(percent = count/value) %>% 
+  mutate(name = factor(name, levels = rev(orderVariants$name))) %>% 
+  ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderVariants$label)),
+            ylab = "% Reported", xlab = "") + 
+  theme_pubclean(base_size = textSize/2) +
+  theme(legend.title = element_blank()) -> p2
+
+plot_grid(p1, p2, align = "hv", axis = "tblr")
 
 ```
 
@@ -387,13 +416,26 @@ data.essentiality %>%
   mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) %>% 
   ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
             color = "continent", size = 4,
-            xlab = "Score of Essentiality", ylab = "% Reported") + 
+            xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
   lims(x = c(0, 1), y = c(0,1))+
   geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
                    show.legend = F, size = textSize/3)+
-  theme_pubclean(base_size = textSize*2) + 
-  theme(legend.position = "top", legend.title = element_blank()) 
+  theme_pubclean(base_size = textSize/2) + 
+  theme(legend.position = "none") -> p1
+
+data.reported %>% 
+  filter(section == "Functional") %>% 
+  pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") %>% 
+  mutate(percent = count/value) %>% 
+  mutate(name = factor(name, levels = rev(orderFunctional$name))) %>% 
+  ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderFunctional$label)),
+            ylab = "% Reported", xlab = "") + 
+  theme_pubclean(base_size = textSize/2) +
+  theme(legend.title = element_blank()) -> p2
+
+plot_grid(p1, p2, align = "hv", axis = "tblr")
 
 ```
 
@@ -407,13 +449,26 @@ data.essentiality %>%
   mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) %>% 
   ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
             color = "continent", size = 4,
-            xlab = "Score of Essentiality", ylab = "% Reported") + 
+            xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
   lims(x = c(0, 1), y = c(0,1))+
   geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
                    show.legend = F, size = textSize/3)+
-  theme_pubclean(base_size = textSize*2) + 
-  theme(legend.position = "top", legend.title = element_blank()) 
+  theme_pubclean(base_size = textSize/2) + 
+  theme(legend.position = "none") -> p1
+
+data.reported %>% 
+  filter(section == "Treatment") %>% 
+  pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") %>% 
+  mutate(percent = count/value) %>% 
+  mutate(name = factor(name, levels = rev(orderTreatment$name))) %>% 
+  ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderTreatment$label)),
+            ylab = "% Reported", xlab = "") + 
+  theme_pubclean(base_size = textSize/2) +
+  theme(legend.title = element_blank()) -> p2
+
+plot_grid(p1, p2, align = "hv", axis = "tblr")
 
 ```
 
