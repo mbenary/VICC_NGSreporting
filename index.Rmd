@@ -112,10 +112,11 @@ sum.country %>%
 
 plot.countries +
   annotate("table", x = -180, y = -70, label = list(cbind(na.region))) +
-  theme_transparent(base_size = textSize) +
+  theme_transparent(base_size = textSize/2) +
   theme(legend.position = "bottom") -> plot.countries
 
 plot.countries
+ggsave("figures/overviewParticipants.png", width = 14, height = 10.5, dpi = 600)
 ```
 
 ### Background of participants
@@ -132,6 +133,7 @@ data %>%
   as.data.frame() %>% 
   upset(nintersects = NA, order.by = "freq", point.size = 5, mainbar.y.label = "", sets.x.label = "# Responses", text.scale = 2) 
 
+ggsave("figures/overviewBackground.png", width = 14, height = 7, dpi = 600)
 ```
 
 
@@ -148,13 +150,14 @@ data %>%
   mutate(value = ifelse(value %in% cancer.factor, value, "Other")) %>% 
   count() %>% 
   mutate(cancer_type = factor(value, levels = cancer.factor)) %>% 
-  ggbarplot(x = "cancer_type", y = "n", fill = "n", 
+  filter(cancer_type != "Not specified") %>% 
+  ggbarplot(x = "cancer_type", y = "n", fill = "grey23", 
             ylab = "# Responses", xlab = "", rotate = T) +
-  scale_fill_continuous(low="thistle2", high="darkred") +
+  #scale_fill_continuous(low="thistle2", high="darkred") +
   theme_pubclean(base_size = textSize) +
   theme(legend.position = "none") -> plot.cancer
 plot.cancer
-
+ggsave("figures/overviewTumors.png", width = 14, height = 7, dpi = 600)
 ```
 
 
@@ -208,7 +211,7 @@ data.essentiality %>%
             label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
             lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-  ylim(0, 1)+
+  ylim(-0.16, 1)+
   geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   theme_pubclean(base_size = textSize*2) + 
   theme(legend.position = "top", legend.title=element_blank()) 
@@ -231,7 +234,7 @@ data.essentiality %>%
             label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
             lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-  ylim(0, 1)+
+  ylim(-0.16, 1)+
   geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   theme_pubclean(base_size = textSize*2) + 
   theme(legend.position = "top", legend.title=element_blank()) 
@@ -255,7 +258,7 @@ data.essentiality %>%
             label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
             lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-  ylim(0, 1)+
+  ylim(-0.16, 1)+
   geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   theme_pubclean(base_size = textSize*2) + 
   theme(legend.position = "top", legend.title=element_blank()) 
@@ -279,7 +282,7 @@ data.essentiality %>%
             label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
             lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-  ylim(0, 1)+
+  ylim(-0.16, 1)+
   geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   theme_pubclean(base_size = textSize*2) +
   theme(legend.position = "top", legend.title=element_blank()) 
@@ -303,7 +306,7 @@ data.essentiality %>%
             label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
             lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-  ylim(0, 1)+
+  ylim(-0.16, 1)+
   geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
   theme_pubclean(base_size = textSize*2) + 
   theme(legend.position = "top", legend.title=element_blank())
@@ -323,7 +326,7 @@ data %>%
   left_join(nrResp %>% pivot_longer(everything(), names_to = "continent")) %>% 
   mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
          `No Response` = value - sumResponses) %>% 
-  mutate(percReported = Reported / value) -> data.reported
+  mutate(percReported = Reported / sumResponses) -> data.reported
 
 data %>% 
   filter(class == "Report") %>% 
@@ -333,10 +336,10 @@ data %>%
   mutate(value = nrResp %>% as_vector() %>% sum()) %>% 
   mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
          `No Response` = value - sumResponses) %>% 
-  mutate(percReported = Reported / value) %>% 
+  mutate(percReported = Reported / sumResponses) %>% 
   mutate(continent = "Worldwide") %>% 
   bind_rows(data.reported) -> data.reported
-  
+
 ```
     
 ### General Information on NGS analysis
@@ -350,7 +353,7 @@ data.essentiality %>%
             color = "continent", size = 4,
             xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
   lims(x = c(0, 1), y = c(0,1))+
-  geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  geom_abline(slope = 1, intercept = 0, lty = "dashed", size = 1, color = "grey23")+
   geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
                    show.legend = F, size = textSize/4)+
   theme_pubclean(base_size = textSize/2) + 
@@ -383,7 +386,7 @@ data.essentiality %>%
             color = "continent", size = 4,
             xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
   lims(x = c(0, 1), y = c(0,1))+
-  geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  geom_abline(slope = 1, intercept = 0, lty = "dashed", size = 1, color = "grey23")+
   geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
                    show.legend = F, size = textSize/3)+
   theme_pubclean(base_size = textSize/2) + 
@@ -417,8 +420,8 @@ data.essentiality %>%
   ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
             color = "continent", size = 4,
             xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
-  lims(x = c(0, 1), y = c(0,1))+
-  geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  lims(x = c(-0.16, 1), y = c(0,1))+
+  geom_abline(slope = 1, intercept = 0, lty = "dashed", size = 1, color = "grey23")+
   geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
                    show.legend = F, size = textSize/3)+
   theme_pubclean(base_size = textSize/2) + 
@@ -451,7 +454,7 @@ data.essentiality %>%
             color = "continent", size = 4,
             xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
   lims(x = c(0, 1), y = c(0,1))+
-  geom_vline(xintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  geom_abline(slope = 1, intercept = 0, lty = "dashed", size = 1, color = "grey23")+
   geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
                    show.legend = F, size = textSize/3)+
   theme_pubclean(base_size = textSize/2) + 
@@ -513,3 +516,4 @@ Email addresses were removed before uploading the final data set.
 In total `r nrDoubleResponders` participants filled out the survey twice over the course of the project. For the main analysis the most recent response has been selected. A comparison of consistency between is analysed separately.
 
 A cutoff of `r cutoff` has been defined to identify an elementary NGS report. Based on the results coming from different regions, the elements can and should be adjusted.
+

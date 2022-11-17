@@ -91,7 +91,8 @@ names.functional <- c("Variant prevalence in patient's tumor type",
                       "Somatic variants classified by AMP/ASCO/CAP tiers",
                       "Somatic variants classified for pathogenicity/oncogenicity",
                       "Germline variants classified by ACMG/AMP criteria",
-                      "Functional mechanism per variant (i.e. loss of function, activating)")
+                      "Functional mechanism per variant (i.e. loss of function, activating)",
+                      "Other Guidelines Used")
 names.treatment <- c("Diagnostic information (if available) per variant",
                      "Prognostic information (if available) per variant",
                      "Therapeutic/Predictive information (if available) per variant",
