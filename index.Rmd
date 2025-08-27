@@ -6,10 +6,11 @@ output:
       bg: "#fdfdfd"
       fg: "#18252b" 
       primary: "#18252b"
-#      base_font:
-#        google: Prompt
-#      code_font:
-#        google: JetBrains Mono
+      base_font:
+        google: Prompt
+      code_font:
+        google: JetBrains Mono
+      base_size: 24
     orientation: columns
     vertical_layout: fill
     fig_mobile: TRUE
@@ -211,8 +212,9 @@ plot.cancer
 
 Column {data-width=650 .tabset}
 -----------------------------------------------------------------------
+
 ### General Information on NGS analysis
-```{r plotOverview, fig.width=40, fig.height=20}
+```{r plotOverview, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
 data.essentiality |> 
   filter(section == "Overview", continent == "Worldwide") |> 
   arrange(normEssent) |> 
@@ -234,7 +236,7 @@ data.essentiality |>
 ```
 
 ### Overview of variant reporting
-```{r plotVariants, fig.width=40, fig.height=20}
+```{r plotVariants, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
 data.essentiality |> 
   filter(section == "Variants") |> 
   filter(continent == "Worldwide") |> 
@@ -257,7 +259,7 @@ data.essentiality |>
 ```
 
 ### Overview of functional assessment
-```{r plotFunctional, fig.width=40, fig.height=20}
+```{r plotFunctional, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
 data.essentiality |> 
   filter(section == "Functional") |> 
   filter(continent == "Worldwide") |> 
@@ -281,7 +283,7 @@ data.essentiality |>
 ```
 
 ### Treatment recommendations
-```{r plotTreatments, fig.width=40, fig.height=20}
+```{r plotTreatments, fig.width=40, fig.height=2, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
 data.essentiality |> 
   filter(section == "Treatment") |> 
   filter(continent == "Worldwide") |> 
@@ -305,7 +307,7 @@ data.essentiality |>
 ```
 
 ### Clinical trials
-```{r plotClinicalTrials, fig.width=40, fig.height=20}
+```{r plotClinicalTrials, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
 data.essentiality |> 
   filter(group == "clinical trial") |> 
   filter(continent == "Worldwide") |> 
