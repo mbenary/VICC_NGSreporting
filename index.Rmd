@@ -333,7 +333,7 @@ data.essentiality |>
 
 Reporting
 ====================================
-Row
+Row {.tabset}
 -------------------------------------
 ```{r calcReported}
 responses.reported <- c("No Response", "Not Reported", "Reported")
@@ -427,8 +427,6 @@ plot_grid(p1, p2, align = "hv", axis = "tblr")
 
 ```
 
-Row
--------------------------------------    
 
 ### Overview of functional assessment
     
