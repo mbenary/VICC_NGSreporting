@@ -10,7 +10,6 @@ output:
         google: Prompt
       code_font:
         google: JetBrains Mono
-      base_size: 24
     orientation: columns
     vertical_layout: fill
     fig_mobile: TRUE
@@ -35,11 +34,13 @@ library(ggplotify)
 # thematic::thematic_rmd()
 ```
 
+<!---
 ```{css, echo=FALSE}
 .fluid-row {
   font-size: 5.9vw;
 }
 ```
+--->
 
 ```{r load-data, include=FALSE}
 data <- read_csv("data/NGSreportElementsClean.csv")
