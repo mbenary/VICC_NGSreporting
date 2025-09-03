@@ -39,6 +39,10 @@ library(ggplotify)
 .fluid-row {
   font-size: 5.9vw;
 }
+
+table.dataTable tbody th, table.dataTable tbody td {
+    padding: 2px 10px; /* e.g. change 8x to 4px here */
+}
 ```
 --->
 
@@ -499,13 +503,13 @@ Data
 ```{r tableParticipants}
 sum.country |> 
   arrange(desc(n)) |> 
-  datatable(caption = "Overview of the number of survey responses for each country.")
+  datatable(caption = "Overview of the number of survey responses for each country.", colnames = c('Country' = 'region', '# Participants' = 'n'), rownames = F)  
 ```
 
 ### Essentiality
 ```{r tableEssentiality}
 data.essentiality |> 
-  datatable(caption = "Overview of the essentiality calculated by continent.")
+  datatable(caption = "Overview of the essentiality fore each element in the survey calculated by continent.", colnames = c('Survey section'='section', 'Survey group' = 'group', 'Survey element' = 'name', '# Responses' = 'totEssent', 'Sum of Essentiality' = 'sumEssent', 'Score of Essentiality (SE)' = 'normEssent', 'Continent' = 'continent' ) , rownames = F)
 ```
 
 
