@@ -509,7 +509,8 @@ sum.country |>
 ### Essentiality
 ```{r tableEssentiality}
 data.essentiality |> 
-  datatable(caption = "Overview of the essentiality fore each element in the survey calculated by continent.", colnames = c('Survey section'='section', 'Survey group' = 'group', 'Survey element' = 'name', '# Responses' = 'totEssent', 'Sum of Essentiality' = 'sumEssent', 'Score of Essentiality (SE)' = 'normEssent', 'Continent' = 'continent' ) , rownames = F)
+  datatable(caption = "Overview of the essentiality fore each element in the survey calculated by continent.", colnames = c('Survey section'='section', 'Survey group' = 'group', 'Survey element' = 'name', '# Responses' = 'totEssent', 'Sum of Essentiality' = 'sumEssent', 'Score of Essentiality (SE)' = 'normEssent', 'Continent' = 'continent' ) , rownames = F) |> 
+  formatRound('Score of Essentiality (SE)', 2)
 ```
 
 
