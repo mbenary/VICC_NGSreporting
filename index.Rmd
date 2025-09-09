@@ -10,7 +10,7 @@ output:
         google: Prompt
       code_font:
         google: JetBrains Mono
-    orientation: columns
+    orientation: rows
     vertical_layout: fill
     fig_mobile: TRUE
 editor_options: 
@@ -26,6 +26,7 @@ library(ggpmisc)
 library(ggrepel)
 library(DT)
 library(ComplexUpset)
+library(upsetjs)
 library(sf)
 library(cowplot)
 library(grid)
@@ -96,7 +97,7 @@ Introduction
 
 Next Generation Sequencing (NGS) is increasingly used in routine clinical oncology. To guide the interpretation of NGS variants, multiple international guidelines and standards have been published, and these are integrated into cancer NGS reports in varying ways worldwide. However, little is known about how these guidelines are applied in real-world laboratory reporting. To address this, the Variant Interpretation for Cancer Consortium Virtual Molecular Tumor Board (VICC-VMTB), in collaboration with the Cancer Genomics Consortium (CGC) and the ClinGen Somatic Clinical Domain Working Group (CDWG), conducted a global survey of cancer NGS reporting practices. The survey aimed to identify which reporting elements are considered essential and how often they actually appear in NGS reports.
 
-Column {data-width=300 .tabset}
+Row
 -----------------------------------------------------------------------
 ### Global representation of survey responses
 
@@ -144,12 +145,38 @@ plot.countries
 #ggsave("figures/overviewParticipants.png", width = 14, height = 10.5, dpi = 600)
 ```
 
-Column {data-width=300 .tabset}
+
+Row
 -----------------------------------------------------------------------
+### Types of tumors analysed
+```{r plotTumortypes}
+cancer.factor <- rev(c("Solid Tumor", "Hematologic Malignancies", 
+                       "Both", "Both (only pediatric cancer)", "Other", "Not specified"))
+data |> 
+  filter(name == "cancer_type") |> 
+  select(ID, value) |> 
+  distinct() |> 
+  group_by(value) |> 
+  replace_na(list(value = "Not specified")) |> 
+  mutate(value = ifelse(value %in% cancer.factor, value, "Other")) |> 
+  count() |> 
+  mutate(cancer_type = factor(value, levels = cancer.factor)) |> 
+  filter(cancer_type != "Not specified") |> 
+  ggbarplot(x = "cancer_type", y = "n", fill = "grey23", 
+            ylab = "# Responses", xlab = "", rotate = T) +
+  #scale_fill_continuous(low="thistle2", high="darkred") +
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "none") -> plot.cancer
+plotly::ggplotly(plot.cancer)
+
+```
+
+
 
 ### Background of participants
+Histogram of participant work settings at a clinical, commercial, and/or academic setting.
 
-```{r institutes, fig.width=40, fig.height=20, fig.cap=paste("Histogram of participant work settings at a clinical, commercial, and/or academic setting.")}
+```{r institutes)}
 org.factor <- c("Clinical/Hospital Laboratory", "Commercial Laboratory", "Academic/Research Laboratory", "Other")
 data |> 
   filter(name == "organization") |> 
@@ -177,43 +204,11 @@ data |>
   mutate(count = 1) |> 
   pivot_wider(names_from = organization, values_from = count, values_fill = 0) -> data.upset
 data.upset[org.factor] <- data.upset[org.factor] == 1
+upsetjs(sizingPolicy = upsetjsSizingPolicy()) |> 
+  fromDataFrame(data.upset |> select(-ID)) |> 
+  generateDistinctIntersections() |> 
+  chartFontSizes(bar.label = paste0(as.character(textSize/2), "px"), set.label = paste0(as.character(textSize/2), "px"), axis.tick = paste0(as.character(textSize/2), "px"))
 
-data.upset |> 
-  upset(intersect = org.factor, name = "", 
-        set_sizes = (upset_set_size() + ylab("# Responses")),
-        base_annotations = list(
-          'Intersection size' = (intersection_size() + ylab("# Responses")) 
-          )) +
-  theme_pubr(base_size = textSize) -> plot.participants 
-plot.participants
-
-#ggsave("figures/overviewBackground.png", width = 14, height = 7, dpi = 600)
-```
-
-Column {data-width=300 .tabset}
------------------------------------------------------------------------
-
-### Types of tumors analysed
-```{r plotTumortypes, fig.width=40, fig.height=20}
-cancer.factor <- rev(c("Solid Tumor", "Hematologic Malignancies", 
-                       "Both", "Both (only pediatric cancer)", "Other", "Not specified"))
-data |> 
-  filter(name == "cancer_type") |> 
-  select(ID, value) |> 
-  distinct() |> 
-  group_by(value) |> 
-  replace_na(list(value = "Not specified")) |> 
-  mutate(value = ifelse(value %in% cancer.factor, value, "Other")) |> 
-  count() |> 
-  mutate(cancer_type = factor(value, levels = cancer.factor)) |> 
-  filter(cancer_type != "Not specified") |> 
-  ggbarplot(x = "cancer_type", y = "n", fill = "grey23", 
-            ylab = "# Responses", xlab = "", rotate = T) +
-  #scale_fill_continuous(low="thistle2", high="darkred") +
-  theme_pubr(base_size = textSize*2) +
-  theme(legend.position = "none") -> plot.cancer
-plot.cancer
-#ggsave("figures/overviewTumors.png", width = 14, height = 7, dpi = 600)
 ```
 
 
