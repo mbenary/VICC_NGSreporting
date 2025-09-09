@@ -370,15 +370,24 @@ data.essentiality |>
   filter(section == "Overview") |> 
   left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
   mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
-  ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
-            color = "continent", size = 4,
-            xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
-  lims(x = c(0, 1), y = c(0,1))+
-  geom_abline(slope = 1, intercept = 0, lty = "dashed", size = 1, color = "grey23")+
-  geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
-                   show.legend = F, size = textSize/4)+
-  theme_pubr(base_size = textSize/2) + 
-  theme(legend.position = "none") -> p1
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  # Hover text:
+  text = ~paste(name),
+  color = ~continent, size = 4
+) |> 
+  plotly::layout(showlegend = FALSE, 
+                 xaxis = list(title = "Score of Essentiality (SE)"), 
+                 yaxis = list(title = "% Reported"),
+                 shapes = list(list(
+    type = "line", 
+    x0 = 0, 
+    x1 = 1, 
+    xref = "x",
+    y0 = 0, 
+    y1 = 1,
+    yref = "y",
+    line = list(color = "grey23", dash="dashdot")
+  ))) -> p1
 
 data.reported |> 
   filter(section == "Overview") |> 
@@ -389,9 +398,9 @@ data.reported |>
             rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderOverview$label)),
             ylab = "% Reported", xlab = "") + 
   theme_pubr(base_size = textSize/2) +
-  theme(legend.title = element_blank()) -> p2
+  theme(legend.position = "none") -> p2
 
-plot_grid(p1, p2, align = "hv", axis = "tblr")
+plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "% Reported")), titleX = TRUE, titleY = TRUE)
 
 ```
  
@@ -404,15 +413,24 @@ data.essentiality |>
   filter(section == "Variants") |> 
   left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
   mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
-  ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
-            color = "continent", size = 4,
-            xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
-  lims(x = c(0, 1), y = c(0,1))+
-  geom_abline(slope = 1, intercept = 0, lty = "dashed", size = 1, color = "grey23")+
-  geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
-                   show.legend = F, size = textSize/4)+
-  theme_pubr(base_size = textSize/2) + 
-  theme(legend.position = "none") -> p1
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  # Hover text:
+  text = ~paste(name),
+  color = ~continent, size = 4
+) |> 
+  plotly::layout(showlegend = FALSE, 
+                 xaxis = list(title = "Score of Essentiality (SE)"), 
+                 yaxis = list(title = "% Reported"),
+                 shapes = list(list(
+    type = "line", 
+    x0 = 0, 
+    x1 = 1, 
+    xref = "x",
+    y0 = 0, 
+    y1 = 1,
+    yref = "y",
+    line = list(color = "grey23", dash="dashdot")
+  ))) -> p1
 
 data.reported |> 
   filter(section == "Variants") |> 
@@ -423,9 +441,9 @@ data.reported |>
             rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderVariants$label)),
             ylab = "% Reported", xlab = "") + 
   theme_pubr(base_size = textSize/2) +
-  theme(legend.title = element_blank()) -> p2
+  theme(legend.position = "none") -> p2
 
-plot_grid(p1, p2, align = "hv", axis = "tblr")
+plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "% Reported")), titleX = TRUE, titleY = TRUE)
 
 ```
 
@@ -437,15 +455,24 @@ data.essentiality |>
   filter(section == "Functional") |> 
   left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
   mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
-  ggscatter(x = "normEssent", y = "percReported", palette = palContinents, 
-            color = "continent", size = 4,
-            xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
-  lims(x = c(-0.16, 1), y = c(0,1))+
-  geom_abline(slope = 1, intercept = 0, lty = "dashed", size = 1, color = "grey23")+
-  geom_label_repel(aes(label = label, color = continent), box.padding = 1, max.overlaps = Inf, 
-                   show.legend = F, size = textSize/4)+
-  theme_pubr(base_size = textSize/2) + 
-  theme(legend.position = "none") -> p1
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  # Hover text:
+  text = ~paste(name),
+  color = ~continent, size = 4
+) |> 
+  plotly::layout(showlegend = FALSE, 
+                 xaxis = list(title = "Score of Essentiality (SE)"), 
+                 yaxis = list(title = "% Reported"),
+                 shapes = list(list(
+    type = "line", 
+    x0 = 0, 
+    x1 = 1, 
+    xref = "x",
+    y0 = 0, 
+    y1 = 1,
+    yref = "y",
+    line = list(color = "grey23", dash="dashdot")
+  ))) -> p1
 
 data.reported |> 
   filter(section == "Functional") |> 
@@ -456,9 +483,9 @@ data.reported |>
             rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderFunctional$label)),
             ylab = "% Reported", xlab = "") + 
   theme_pubr(base_size = textSize/2) +
-  theme(legend.title = element_blank()) -> p2
+  theme(legend.position = "none") -> p2
 
-plot_grid(p1, p2, align = "hv", axis = "tblr")
+plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "% Reported")), titleX = TRUE, titleY = TRUE)
 ```
 
 ### Treatment recommendations
@@ -498,7 +525,7 @@ data.reported |>
   theme_pubr(base_size = textSize/2) +
   theme(legend.position = "None") ->p2
 
-plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE))
+plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "% Reported")), titleX = TRUE, titleY = TRUE)
 ```
 
 
