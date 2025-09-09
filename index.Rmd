@@ -91,14 +91,13 @@ textSize <- 24
 cutoff <- 0.75
 ```
 
-Results
+Introduction
 =====================================  
 
 Next Generation Sequencing (NGS) is increasingly used in routine clinical oncology. To guide the interpretation of NGS variants, multiple international guidelines and standards have been published, and these are integrated into cancer NGS reports in varying ways worldwide. However, little is known about how these guidelines are applied in real-world laboratory reporting. To address this, the Variant Interpretation for Cancer Consortium Virtual Molecular Tumor Board (VICC-VMTB), in collaboration with the Cancer Genomics Consortium (CGC) and the ClinGen Somatic Clinical Domain Working Group (CDWG), conducted a global survey of cancer NGS reporting practices. The survey aimed to identify which reporting elements are considered essential and how often they actually appear in NGS reports.
 
-Column {data-width=350}
+Column {data-width=300 .tabset}
 -----------------------------------------------------------------------
-
 ### Global representation of survey responses
 
 ```{r participants, fig.width=20, fig.height=10, fig.cap=paste("Overview of survey responses across the globe. Most respondents represented laboratories in North America (n = ", nrResp$`North America`,") and Europe (n = ", nrResp$Europe, "), with additional responses from other countries (n = ", nrResp$Other, "). ")}
@@ -145,9 +144,12 @@ plot.countries
 #ggsave("figures/overviewParticipants.png", width = 14, height = 10.5, dpi = 600)
 ```
 
+Column {data-width=300 .tabset}
+-----------------------------------------------------------------------
+
 ### Background of participants
 
-```{r institutes, fig.width=20, fig.height=10, fig.cap=paste("Histogram of participant work settings at a clinical, commercial, and/or academic setting.")}
+```{r institutes, fig.width=40, fig.height=20, fig.cap=paste("Histogram of participant work settings at a clinical, commercial, and/or academic setting.")}
 org.factor <- c("Clinical/Hospital Laboratory", "Commercial Laboratory", "Academic/Research Laboratory", "Other")
 data |> 
   filter(name == "organization") |> 
@@ -188,9 +190,11 @@ plot.participants
 #ggsave("figures/overviewBackground.png", width = 14, height = 7, dpi = 600)
 ```
 
+Column {data-width=300 .tabset}
+-----------------------------------------------------------------------
 
 ### Types of tumors analysed
-```{r plotTumortypes, fig.width=20, fig.height=10}
+```{r plotTumortypes, fig.width=40, fig.height=20}
 cancer.factor <- rev(c("Solid Tumor", "Hematologic Malignancies", 
                        "Both", "Both (only pediatric cancer)", "Other", "Not specified"))
 data |> 
@@ -206,14 +210,16 @@ data |>
   ggbarplot(x = "cancer_type", y = "n", fill = "grey23", 
             ylab = "# Responses", xlab = "", rotate = T) +
   #scale_fill_continuous(low="thistle2", high="darkred") +
-  theme_pubr(base_size = textSize) +
+  theme_pubr(base_size = textSize*2) +
   theme(legend.position = "none") -> plot.cancer
 plot.cancer
 #ggsave("figures/overviewTumors.png", width = 14, height = 7, dpi = 600)
 ```
 
 
-Column {data-width=650 .tabset}
+Results on essentiality
+===================================== 
+Column {.tabset}
 -----------------------------------------------------------------------
 
 ### General Information on NGS analysis
@@ -560,8 +566,7 @@ Methods
 ### Preparing a comprehensive survey regarding reporting practices
 
 The survey was based on report examples from presentations from the VICC-VMTB working group and publicly available reports from companies (supp. Table S7). General information on the tumor entity, the reported variants, their functional assessments, and treatment recommendations was requested. Most questions were related to single nucleotide variants. Furthermore, the survey covered aspects of how clinical trials are reported and more complex information, such as mutational signatures. Participants could also provide more context in free form. For each component in the survey, we asked two questions: First, whether the participants defined an element as essential. And second, whether the participant reported this element in their molecular reports.
-Preprocessing of survey data
-Country names were cleaned and harmonized to allow grouping by region. Seven participants filled out the survey twice throughout the project. For the analysis, the most recent response has been selected.
+For preprocessing of survey data, the country names were cleaned and harmonized to allow grouping by region. Seven participants filled out the survey twice throughout the project. For the analysis, the most recent response has been selected.
 
 ### Defining a score of essentiality to summarize results
 Each element of an NGS report was defined as a) essential (E), b) preferred, but not essential (P), or c) not recommended (N). The responses were summarized as an essentiality score (SE), which is normalized between the range of -1 (not essential) and 1 (essential):
