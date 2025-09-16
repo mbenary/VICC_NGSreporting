@@ -354,7 +354,7 @@ data |>
   left_join(nrResp |> pivot_longer(everything(), names_to = "continent")) |> 
   mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
          `No Response` = value - sumResponses) |> 
-  mutate(percReported = Reported / sumResponses) -> data.reported
+  mutate(percReported = Reported / sumResponses*100) -> data.reported
 
 data |> 
   filter(class == "Report") |> 
@@ -364,7 +364,7 @@ data |>
   mutate(value = nrResp |> as_vector() |> sum()) |> 
   mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
          `No Response` = value - sumResponses) |> 
-  mutate(percReported = Reported / sumResponses) |> 
+  mutate(percReported = Reported / sumResponses*100) |> 
   mutate(continent = "Worldwide") |> 
   bind_rows(data.reported) -> data.reported
 
@@ -391,7 +391,7 @@ data.essentiality |>
     x1 = 1, 
     xref = "x",
     y0 = 0, 
-    y1 = 1,
+    y1 = 100,
     yref = "y",
     line = list(color = "grey23", dash="dashdot")
   ))) -> p1
@@ -399,7 +399,7 @@ data.essentiality |>
 data.reported |> 
   filter(section == "Overview") |> 
   pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") |> 
-  mutate(percent = count/value) |> 
+  mutate(percent = round(count/value*100, 2)) |> 
   mutate(name = factor(name, levels = rev(orderOverview$name))) |> 
   ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
             rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderOverview$label)),
@@ -434,7 +434,7 @@ data.essentiality |>
     x1 = 1, 
     xref = "x",
     y0 = 0, 
-    y1 = 1,
+    y1 = 100,
     yref = "y",
     line = list(color = "grey23", dash="dashdot")
   ))) -> p1
@@ -442,7 +442,7 @@ data.essentiality |>
 data.reported |> 
   filter(section == "Variants") |> 
   pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") |> 
-  mutate(percent = count/value) |> 
+  mutate(percent = round(count/value*100, 2)) |> 
   mutate(name = factor(name, levels = rev(orderVariants$name))) |> 
   ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
             rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderVariants$label)),
@@ -476,7 +476,7 @@ data.essentiality |>
     x1 = 1, 
     xref = "x",
     y0 = 0, 
-    y1 = 1,
+    y1 = 100,
     yref = "y",
     line = list(color = "grey23", dash="dashdot")
   ))) -> p1
@@ -484,7 +484,7 @@ data.essentiality |>
 data.reported |> 
   filter(section == "Functional") |> 
   pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") |> 
-  mutate(percent = count/value) |> 
+  mutate(percent = round(count/value*100, 2)) |> 
   mutate(name = factor(name, levels = rev(orderFunctional$name))) |> 
   ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
             rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderFunctional$label)),
@@ -516,7 +516,7 @@ data.essentiality |>
     x1 = 1, 
     xref = "x",
     y0 = 0, 
-    y1 = 1,
+    y1 = 100,
     yref = "y",
     line = list(color = "grey23", dash="dashdot")
   ))) -> p1
@@ -524,7 +524,7 @@ data.essentiality |>
 data.reported |> 
   filter(section == "Treatment") |> 
   pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") |> 
-  mutate(percent = count/value) |> 
+  mutate(percent = round(count/value*100, 2)) |> 
   mutate(name = factor(name, levels = rev(orderTreatment$name))) |> 
   ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
             rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderTreatment$label)),
