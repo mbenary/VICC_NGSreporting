@@ -101,7 +101,7 @@ Row
 -----------------------------------------------------------------------
 ### Global representation of survey responses
 
-```{r participants, fig.width=20, fig.height=10, fig.cap=paste("Overview of survey responses across the globe. Most respondents represented laboratories in North America (n = ", nrResp$`North America`,") and Europe (n = ", nrResp$Europe, "), with additional responses from other countries (n = ", nrResp$Other, "). ")}
+```{r participants, fig.cap=paste("Overview of survey responses across the globe. Most respondents represented laboratories in North America (n = ", nrResp$`North America`,") and Europe (n = ", nrResp$Europe, "), with additional responses from other countries (n = ", nrResp$Other, "). ")}
 data |> 
   select(region, ID, continent) |> 
   distinct() |> 
@@ -116,6 +116,11 @@ world |>
   cbind(st_coordinates(st_centroid(world$geometry))) |> 
   mutate(region = name) |> 
   left_join(sum.country) |> 
+#  leaflet::leaflet() |> 
+#  addTiles() |> 
+#  setView(lat = 10, lng = 0, zoom = 2) %>%
+#  addPolygons(fillColor = ~ n, stroke = FALSE)
+#
   ggplot() + geom_sf(aes(fill = n)) +
   scale_fill_continuous(low="thistle2", high="darkred", 
                         guide="colorbar",na.value="lightgray", 
@@ -142,6 +147,7 @@ plot.countries +
   theme(base_size = textSize, legend.position = "bottom") -> plot.countries
 
 plot.countries
+#plotly::ggplotly(plot.countries)
 #ggsave("figures/overviewParticipants.png", width = 14, height = 10.5, dpi = 600)
 ```
 
@@ -287,7 +293,7 @@ data.essentiality |>
 ```
 
 ### Treatment recommendations
-```{r plotTreatments, fig.width=40, fig.height=2, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+```{r plotTreatments, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
 data.essentiality |> 
   filter(section == "Treatment") |> 
   filter(continent == "Worldwide") |> 
