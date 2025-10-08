@@ -1,7 +1,7 @@
 ---
 title: "An International Landscape of Cancer NGS Reporting Practices"
 format: dashboard
-output-dir: docs
+#output-dir: docs
 #theme:
 #  bg: "#fdfdfd"
 #  fg: "#18252b" 
