@@ -1,0 +1,392 @@
+---
+title: "An overview of relevant NGS reporting elements"
+author:
+  - name: Manuela Benary 
+    affiliation: Charité Comprehensive Cancer Center / Core Unit Bioinformatics (BIH)
+    affiliation_url: https://https://www.cubi.bihealth.org/
+date: "`r Sys.Date()`"
+output: distill::distill_article
+execute:
+  echo: false
+  warning: false
+editor_options: 
+  chunk_output_type: console
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, error = FALSE,
+                      cache = TRUE, fig.width = 12, fig.height = 12)
+knitr::opts_knit$set(root.dir = '../')
+```
+
+## VICC NGS reporting survey
+
+Results of Next Generation Sequencing (NGS) are increasingly incorporated in routine clinical oncology. Multiple guidelines and standards have been issued globally to support clinical NGS variant interpretation and are currently integrated in different ways into cancer NGS reports around the world. However, a thorough capture of how these guidelines are being translated in real-world laboratory reporting has not yet been clearly studied. To this end, the Variant Interpretation for Cancer Consortium Virtual Molecular Tumor Board (VICC-VMTB), in collaboration with the Cancer Genomics Consortium (CGC) and the ClinGen Somatic Clinical Domain Working Group (CDWG), distributed a comprehensive survey regarding reporting practices for cancer NGS testing worldwide to identify essential elements and their actual occurrence in NGS reports.
+
+## Distributing the survey within DNPM
+
+The survey was distributed among members of the network DNPM in multiple rounds.
+
+```{r loadLibraries}
+library(tidyverse)
+library(ggpubr)
+library(cowplot)
+library(DT)
+
+textSize = 16
+```
+
+```{r readData}
+data <- read_csv("data/Genomic Cancer NGS Report Elements 20221102.csv")
+```
+
+```{r cleanData}
+# create shortcuts for column names
+def.colnames <- tribble(
+  ~colName, ~description,
+  "timestamp", "Timestamp",
+  "email", "Username",
+  "profession", "What is your job title/position?",
+  "region", "In which country do you work?",
+  "organization", "What type of organization do you work for?",
+  "cancer_type", "What kind of cancer cases  do you report/analyze?"
+)
+
+# rename columns 
+data.table::setnames(data, def.colnames$description, def.colnames$colName)
+
+# filter for mailing addresses coming from Germany
+data %>% 
+  group_by(email) %>%
+  mutate(ID = cur_group_id()) %>% 
+  arrange(ID) %>% 
+  slice_max(timestamp) %>% 
+  ungroup() %>% 
+  separate(email, into = c("mail_name", "Institute"), sep = "@") %>% 
+  filter(endsWith(Institute, "de")) -> de.data
+
+```
+
+```{r distributionResponses}
+def.partners <- tribble(
+  ~City, ~Institute,
+  "Berlin", "charite",
+  "Tübingen", "med.uni-tuebingen",
+  "Hamburg", "uke.uni-hamburg",
+  "Dresden", "ukdd",
+  "Essen", "uk-essen",
+  "Würzburg", "uni-wuerzburg",
+  "Freiburg", "uniklinik-freiburg",
+  "Heidelberg", "med.uni-heidelberg",
+  "Heidelberg", "nct-heidelberg",
+  "Ulm", "uniklinik-ulm",
+  "Aachen", "ukaachen",
+  "Bonn", "ukbonn",
+  "Köln", "uk-koeln",
+  "Düsseldorf", "med.uni-duesseldorf",
+  "Frankfurt", "kgu",
+  "Mainz", "uni-mainz",
+  "München", "lmu",
+  "München", "mri.tum",
+  "München", "tum",
+  "Gießen", "uniklinikum-giessen",
+  "Münster", "uni-muenster",
+  "Hannover", "mh-hannover",
+  "Göttingen", "uni-goettingen",
+  "Marburg", "staff.uni-marburg"
+)
+
+de.data %>% 
+  mutate(Institute = str_remove(Institute, "\\.de")) %>% 
+  count(Institute) %>% 
+  full_join(def.partners) %>% 
+  filter(!is.na(City)) %>% 
+  group_by(City) %>% 
+  summarise(nrResponses = sum(n)) %>% 
+  replace_na(list(nrResponses = 0)) %>% 
+  mutate(country = "Germany") -> de.responses
+
+germany <- raster::getData(country = "Germany", level = 1)
+de.responses <- tidygeocoder::geocode(de.responses, city = City, country = country)
+de.responses %>% 
+  pull(nrResponses) %>% 
+  sum() -> nrTotalResponses
+
+ggplot() +
+  geom_polygon(data = germany,
+               aes(x = long, y = lat, group = group),
+               colour = "grey10", fill = "#F59E00", alpha=.5) + 
+  geom_point(data = de.responses, aes(x = long, y = lat, size = nrResponses), 
+             col = "#004D73") +
+  coord_map() + 
+  theme_map()
+```
+
+In total, `r nrTotalResponses` participants from the different members of DNPM answered the survey.
+
+```{r responsesTable}
+de.data %>% 
+  mutate(Institute = str_remove(Institute, "\\.de")) %>% 
+  count(Institute, name = "nrResponses") %>% 
+  full_join(def.partners) %>% 
+  filter(!is.na(City)) %>% 
+  select(City, Institute, nrResponses) %>% 
+  arrange(desc(nrResponses)) %>% 
+  DT::datatable()
+  
+```
+
+```{r prepareLongFormat}
+de.data %>% 
+  pivot_longer(-c(timestamp, ID)) -> data.long
+
+# clean name column
+data.long %>% 
+  mutate(name = str_remove(name, "Which of these report elements are essential for a clinical report or not essential but preferred\\? \\(some of these may not be applicable to your practice\\) ")) -> data.long
+
+
+# define groups of analysis
+data.groups <- c("general", "molecular profile", "clinical trial")
+data.long %>% 
+  mutate(group = ifelse(grepl("molecular profile", name), "molecular profile", NA)) %>% 
+  mutate(group = ifelse(grepl("[cC]linical [tT]rial", name), "clinical trial", group)) %>% 
+  mutate(group = ifelse(grepl("^\\[.*\\]$", name), "general", group)) %>% 
+  replace_na(list(group = "additional")) -> data.long
+
+# define sections for the general information
+data.long %>% 
+  mutate(name = str_remove(name, "\\[")) %>% 
+  mutate(name = str_remove(name, "\\]")) %>% 
+  mutate(name = trimws(name)) %>% 
+  mutate(name = str_remove(name, ".*\\?")) %>% 
+  mutate(name = trimws(name)) -> data.long
+
+
+names.overview <- c("Qualitative NGS Result Summary (i.e. This result is positive/negative)", "Diagnosis", 
+                    "Tissue Source ", "Tumor purity/percentage", 
+                    "Methods/Disclaimer: Assay limitations", "Methods/Disclaimer: Assay performance characteristics",
+                    "Other disclaimers")
+names.variants <- c("Reported list of genetic variants",
+                    "Gene symbol in variant list",
+                    "p. nomenclature in variant list",
+                    "c. nomenclature in variant list",
+                    "g. nomenclature in variant list",
+                    "Gene transcript per variant",
+                    "Variant allele frequency per variant")
+names.functional <- c("Variant prevalence in patient's tumor type",
+                      "Somatic variants classified by AMP/ASCO/CAP tiers",
+                      "Somatic variants classified for pathogenicity/oncogenicity",
+                      "Germline variants classified by ACMG/AMP criteria",
+                      "Functional mechanism per variant (i.e. loss of function, activating)",
+                      "Other Guidelines Used")
+names.treatment <- c("Diagnostic information (if available) per variant",
+                     "Prognostic information (if available) per variant",
+                     "Therapeutic/Predictive information (if available) per variant",
+                     "References used to interpret variant(s)",
+                     "Databases/knowledgebases used to interpret variants",
+                     "Versions of databases used to interpret variants",
+                     "Clinical Trial Information")
+
+data.long %>% 
+  mutate(section = ifelse(name %in% names.overview, "Overview", NA)) %>% 
+  mutate(section = ifelse(name %in% names.variants, "Variants", section)) %>% 
+  mutate(section = ifelse(name %in% names.functional, "Functional", section)) %>% 
+  mutate(section = ifelse(name %in% names.treatment, "Treatment", section))-> data.long
+
+## separate responses for essentiality / report ----
+responses.essential <- c("No response", "Not Recommended", "Preferred, non-essential", "Essential")
+responses.reported <- c("Reported", "Not Reported", "No response")
+
+data.all <- data.long
+data.long %>% 
+  mutate(value = str_split(value, pattern = ";")) %>% 
+  unnest(value) %>% 
+  mutate(class = ifelse(value %in% responses.reported, "Report", NA)) %>% 
+  mutate(class = ifelse(value %in% responses.essential, "Essentiality", class)) -> data.long
+
+```
+
+```{r tumorEntities}
+cancer.factor <- rev(c("Solid Tumor", "Hematologic Malignancies", 
+                       "Both", "Both (only pediatric cancer)", "Other", "Not specified"))
+data.long %>% 
+  filter(name == "cancer_type") %>% 
+  select(ID, value) %>% 
+  distinct() %>% 
+  group_by(value) %>% 
+  replace_na(list(value = "Not specified")) %>% 
+  mutate(value = ifelse(value %in% cancer.factor, value, "Other")) %>% 
+  count() %>% 
+  mutate(cancer_type = factor(value, levels = cancer.factor)) %>% 
+  filter(cancer_type != "Not specified") %>% 
+  ggbarplot(x = "cancer_type", y = "n", fill = "#004D73", 
+            ylab = "# Responses", xlab = "", rotate = T) +
+  #scale_fill_continuous(low="thistle2", high="darkred") +
+  theme_pubclean(base_size = textSize) +
+  theme(legend.position = "none")
+```
+
+## Defining essential elements for molecular reports
+
+Questions were organized into groups, based on topic of the presented elements. These groups include
+
+-   general information,
+-   variant information with a focus on SNVs and small indels,
+-   functional annotation,
+-   clinical information,
+-   aspects of clinical trials, and
+-   more complex molecular profiles.
+
+Each element of an NGS report can be defined as a) essential (E), b) preferred, but not essential (P) or c) not recommended (N). The responses are summarized as a score of essentiality (SE), which is normalized between the range of -1 (contra-productive) and 1 (essential):
+
+$$ SE = \frac{(E+ 0.5\cdot P − N)}{\text{#responses}} $$
+
+```{r calcEssentiality}
+numeric.levels <- c(`No response` = 0, `Not Recommended` = -1, `Preferred, non-essential` = .5, `Essential` = 1)
+responses.essential <- c("No response", "Not Recommended", "Preferred, non-essential", "Essential")
+data <- data.long
+data %>% 
+  filter(class == "Essentiality") %>% 
+  pivot_wider(names_from = "class", values_from = "value") %>% 
+  unnest(Essentiality) %>% 
+  replace_na(list(Essentiality = "No response")) %>% 
+  mutate(Essentiality = factor(Essentiality, levels = responses.essential)) %>%
+  mutate(quantEssent = recode(Essentiality, !!!numeric.levels)) %>% 
+  group_by(name, group, section) %>% 
+  summarise(sumEssent = sum(quantEssent),
+            totEssent = sum(quantEssent != 0),
+            normEssent = sumEssent/totEssent) -> data.essentiality
+
+data.essentiality %>% 
+  mutate(section = ifelse(is.na(section), group, section)) -> data.essentiality
+
+```
+
+```{r plotOverview, layout="l-page"}
+data.essentiality %>% 
+  filter(!is.na(section)) %>% 
+  ggbarplot(x = "name", y = "normEssent", 
+            rotate = T, fill = "#004D73",
+            label = TRUE, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", sort.val = "desc",
+            lab.vjust = 0.5, lab.hjust = 2,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+  ylim(-0.16, 1) +
+  facet_wrap(~section, scales = "free", ncol = 1) +
+  theme_pubclean(base_size = textSize)
+```
+
+```{r tableEssentiality}
+data.essentiality %>% 
+  ungroup() %>% 
+  select(section, name, sumEssent, totEssent, normEssent) %>% 
+  arrange(section, normEssent) %>% 
+  DT::datatable(colnames = c("group" = "section", "sum essentiality" = "sumEssent", "# responses" = "totEssent", "SE" = "normEssent")) %>% 
+  formatRound(columns = c("SE"), digits=2)
+```
+
+
+## Comparison between reported and essential elements
+```{r calcReported}
+responses.reported <- c("No Response", "Not Reported", "Reported")
+data %>% 
+  filter(class == "Report") %>% 
+  group_by(name, group, section) %>% 
+  count(value) %>% 
+  pivot_wider(names_from = value, values_from = n) %>% 
+  mutate(value = nrTotalResponses) %>% 
+  mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
+         `No Response` = value - sumResponses) %>% 
+  mutate(percReported = Reported / sumResponses) -> data.reported
+
+```
+
+```{r plotReported, layout="l-page", fig.height=6}
+data.reported %>% 
+  left_join(data.essentiality, by = c("group", "section", "name")) %>% 
+  filter(!is.na(section)) %>% 
+  ggscatter(x = "normEssent", y = "percReported", size = 4, color = "#004D73", xlab = "Score of Essentiality (SE)", ylab = "% Reported") + 
+  lims(x = c(0, 1), y = c(0,1))+
+  geom_abline(slope = 1, intercept = 0, lty = "dashed", linewidth = 1, color = "grey23")+
+  facet_wrap(~section, nrow = 1)+
+  #ggrepel::geom_label_repel(aes(label = name), box.padding = 2, max.overlaps = Inf, show.legend = F, size = textSize/4)+
+  theme_pubclean(base_size = textSize) + 
+  theme(legend.position = "none")
+```
+
+```{r tableReported}
+data.reported %>% 
+  left_join(data.essentiality, by = c("group", "section", "name")) %>% 
+  ungroup() %>% 
+  filter(!is.na(section)) %>% 
+  select(section, name, sumResponses, percReported, normEssent) %>% 
+  arrange(section, normEssent) %>% 
+  DT::datatable(colnames = c("group" = "section", "% reported" = "percReported", "# responses" = "sumResponses", "SE" = "normEssent")) %>% 
+  formatRound(columns = c("SE", "% reported"), digits=2)
+```
+
+## Molecular profiles
+
+This includes only the responses and it is normalized to the total number of responses. Therefore it should also reflect, that people were able to choose multiple options.
+
+```{r molProfiles}
+data.all %>% 
+  filter(group == "molecular profile") %>% 
+  mutate(name = str_remove(name, ".*one\\)")) %>% 
+  mutate(name = trimws(name)) %>% 
+  mutate(value = str_replace(value, "no;", "no,")) %>% 
+  mutate(value = str_split(value, ";")) %>% 
+  unnest(value) %>% 
+  mutate(group = ifelse(str_detect(value, "tumors"), "entity", "none"),
+         group = ifelse(str_detect(value, "value"), "value", group)) %>% 
+  mutate(group = replace_na(group, "none"), 
+         group = factor(group, levels = c("entity", "value", "none"))) -> data.molprof
+
+data.molprof %>% 
+  filter(!is.na(value)) %>% 
+  group_by(group, name, value) %>% 
+  count() %>% 
+  mutate(percent = n/nrTotalResponses) %>% 
+  ggbarplot(x = "value", y = "percent", fill = "group",
+            facet.by = "name", rotate = T, nrow = 1,
+            label = FALSE, lab.vjust = .5, lab.hjust = -.2, lab.nb.digits = 2,
+            xlab = "", ylab = "% Responses") + 
+  scale_x_discrete(limits = rev) +
+  scale_fill_manual(values = c(entity = "#F59E00", value= "#004D73")) +
+  ylim(0, 1) +
+  theme(legend.position = "none")
+
+```
+
+
+## Additional free text responses
+```{r}
+free.text <- c("Are there other considerations for cancer NGS reports that are not included in this survey?",
+               "How do you report interacting variants? (i.e. EGFR amplification and EGFR T790M)",
+               "What information do you include in a cancer genomic NGS disclaimer?",
+               "Provide any details clarifying answer on previous question on report organization for different variant types.")
+```
+We included the following questions, which allowed for a free form response:
+
+```{r results='asis'}
+cat(paste('1.', free.text), sep = '\n')
+``` 
+
+```{r idxFree}
+data.long %>% 
+  filter(name %in% free.text) %>% 
+  filter(!is.na(value)) -> data.free
+
+data.free %>% 
+  rowwise() %>% 
+  mutate(idx = which(free.text == name)) %>% 
+  pull(idx) %>% 
+  unique() -> idx.free
+```
+
+Answers were given for question # `r idx.free` and are provided below:
+
+```{r tableAnswers}
+data.free %>% 
+  select(value) %>% 
+  DT::datatable()
+```
+

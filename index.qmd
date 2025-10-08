@@ -1,0 +1,524 @@
+---
+title: "An International Landscape of Cancer NGS Reporting Practices"
+format: dashboard
+output-dir: docs
+#theme:
+#  bg: "#fdfdfd"
+#  fg: "#18252b" 
+#  primary: "#18252b"
+html-math-method: mathml
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(flextable)
+library(ggpubr)
+library(ggpmisc)
+library(ggrepel)
+library(DT)
+library(ComplexUpset)
+library(upsetjs)
+library(sf)
+library(cowplot)
+library(grid)
+library(ggplotify)
+library(leaflet)
+```
+
+```{r load-data, include=FALSE}
+data <- read_csv("data/NGSreportElementsClean.csv")
+data.essentiality <- read_csv("data/NGSreportEssentiality.csv")
+data.essentiality.europe <- read_csv("data/NGSreportEssentialityEurope.csv")
+data.reported <- read_csv("data/NGSreportElementsReported.csv")
+data.reported.europe <- read_csv("data/NGSreportElementsReportedEurope.csv")
+```
+
+```{r nrResponders}
+data |> 
+  select(continent, ID) |> 
+  distinct() |> 
+  count(continent) |> 
+  pivot_wider(names_from = "continent", values_from = "n") -> nrResp
+```
+
+```{r colorScheme}
+palContinents <- c(Europe = "#283F46", `North America` = "#3aada8", Other = "gray", Worldwide = "#8B0000")
+
+textSize <- 24
+cutoff <- 0.75
+```
+
+# Introduction
+
+Next Generation Sequencing (NGS) is increasingly used in routine clinical oncology. To guide the interpretation of NGS variants, multiple international guidelines and standards have been published, and these are integrated into cancer NGS reports in varying ways worldwide. However, little is known about how these guidelines are applied in real-world laboratory reporting. To address this, the Variant Interpretation for Cancer Consortium Virtual Molecular Tumor Board (VICC-VMTB), in collaboration with the Cancer Genomics Consortium (CGC) and the ClinGen Somatic Clinical Domain Working Group (CDWG), conducted a global survey of cancer NGS reporting practices. The survey aimed to identify which reporting elements are considered essential and how often they actually appear in NGS reports.
+
+## Row
+
+### Global representation of survey responses
+
+```{r}
+##| label: fig-participants
+##| fig-cap: !expr paste0("Overview of survey responses across the globe. Most respondents represented laboratories in North America (n = ", nrResp$`North America`,") and Europe (n = ", nrResp$Europe,"), with additional responses from other countries (n = ", nrResp$Other,"). ")
+
+data |> 
+  select(region, ID, continent) |> 
+  distinct() |> 
+  mutate(region = ifelse(region == "UK", "United Kingdom", region)) |> 
+  mutate(region = ifelse(region == "USA", "United States of America", region)) |> 
+  group_by(region) |> 
+  count() -> sum.country
+
+world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
+
+## join with participation data
+world_data <- dplyr::left_join(
+    world, sum.country, by = c("name" = "region"))
+
+# Color palette for survey participation rate: higher score = darker red
+pal <- leaflet::colorNumeric(
+    palette = colorRampPalette(c("thistle2", "darkred"))(9),
+    domain = world_data$n
+)
+
+# Build interactive map
+leaflet(world_data, options = leafletOptions(worldCopyJump = FALSE)) |>
+    leaflet::addTiles(options = leaflet::providerTileOptions(noWrap = TRUE)) |>
+    leaflet::addPolygons(
+        fillColor = ~pal(n),
+        color = "white", weight = 1,
+        label = ~paste(name, ":", n),
+        fillOpacity = 0.8
+    ) |>
+    leaflet::addLegend(
+        pal = pal,
+        values = ~n[!is.na(n)],  # remove NA from legend
+        title = "Survey participants"
+    ) |>
+    leaflet::setView(lng = 0, lat = 20, zoom = 2) 
+```
+
+## Row
+
+### Types of tumors analysed
+
+```{r plotTumortypes}
+cancer.factor <- rev(c("Solid Tumor", "Hematologic Malignancies", 
+                       "Both", "Both (only pediatric cancer)", "Other", "Not specified"))
+data |> 
+  filter(name == "cancer_type") |> 
+  select(ID, value) |> 
+  distinct() |> 
+  group_by(value) |> 
+  replace_na(list(value = "Not specified")) |> 
+  mutate(value = ifelse(value %in% cancer.factor, value, "Other")) |> 
+  count() |> 
+  mutate(cancer_type = factor(value, levels = cancer.factor)) |> 
+  filter(cancer_type != "Not specified") |> 
+  ggbarplot(x = "cancer_type", y = "n", fill = "grey23", 
+            ylab = "# Responses", xlab = "", rotate = T) +
+  #scale_fill_continuous(low="thistle2", high="darkred") +
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "none") -> plot.cancer
+plotly::ggplotly(plot.cancer)
+
+```
+
+### Background of participants
+
+```{r institutes)}
+#| fig-cap: Histogram of participant work settings at a clinical, commercial, and/or academic setting.
+org.factor <- c("Clinical/Hospital Laboratory", "Commercial Laboratory", "Academic/Research Laboratory", "Other")
+data |> 
+  filter(name == "organization") |> 
+  select(ID, name, value) |> 
+  distinct() |> 
+  group_by(ID) |> 
+  mutate(org = 1:n()) |> 
+  mutate(org = paste0("org", org, sep="")) |> 
+  pivot_wider(names_from = org, values_from = value) |> 
+  select(-name) |> 
+  mutate(org1 = ifelse(org1 %in% org.factor, org1, "Other")) |> 
+  group_by(org1, org2) |> 
+  count() |> 
+  mutate(org2 = ifelse(is.na(org2), org1, org2)) |>  
+  mutate(org1 = factor(org1, levels = org.factor),
+         org2 = factor(org2, levels = org.factor))  -> sum.organization
+
+data |> 
+  filter(name == "organization") |> 
+  select(ID, name, value) |> 
+  distinct() |> 
+  pivot_wider(names_from = name, values_from = value) |> 
+  unnest(organization) |> 
+  mutate(organization = ifelse(organization %in% org.factor, organization, "Other")) |> 
+  mutate(count = 1) |> 
+  pivot_wider(names_from = organization, values_from = count, values_fill = 0) -> data.upset
+data.upset[org.factor] <- data.upset[org.factor] == 1
+upsetjs(sizingPolicy = upsetjsSizingPolicy()) |> 
+  fromDataFrame(data.upset |> select(-ID)) |> 
+  generateDistinctIntersections() |> 
+  chartFontSizes(bar.label = paste0(as.character(textSize/2), "px"), set.label = paste0(as.character(textSize/2), "px"), axis.tick = paste0(as.character(textSize/2), "px"))
+
+```
+
+# Results on essentiality
+
+## Column {.tabset}
+
+### General Information on NGS analysis
+
+```{r plotOverview, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+data.essentiality |> 
+  filter(section == "Overview", continent == "Worldwide") |> 
+  arrange(normEssent) |> 
+  mutate(label = paste0(name, ", SE = ", round(normEssent, 2))) -> orderOverview
+
+data.essentiality |> 
+  filter(section == "Overview") |> 
+  mutate(name = factor(name, levels = orderOverview$name)) |> 
+  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
+            fill = "continent", 
+            rotate = T, 
+            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 2,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+#  ylim(-0.16, 1)+
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  theme_pubr(base_size = textSize*2) + 
+  theme(legend.position = "top", legend.title=element_blank()) 
+```
+
+### Overview of variant reporting
+
+```{r plotVariants, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+data.essentiality |> 
+  filter(section == "Variants") |> 
+  filter(continent == "Worldwide") |> 
+  arrange(normEssent) |> 
+  mutate(label = paste0(name, ", SE = ", round(normEssent, 2))) -> orderVariants
+
+data.essentiality |> 
+  filter(section == "Variants") |> 
+  mutate(name = factor(name, levels = orderVariants$name)) |> 
+  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
+            fill = "continent", 
+            rotate = T, 
+            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 2,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+#  ylim(-0.16, 1)+
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  theme_pubr(base_size = textSize*2) + 
+  theme(legend.position = "top", legend.title=element_blank()) 
+```
+
+### Overview of functional assessment
+
+```{r plotFunctional, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+data.essentiality |> 
+  filter(section == "Functional") |> 
+  filter(continent == "Worldwide") |> 
+  arrange(normEssent) |> 
+  mutate(label = paste0(name, ", SE = ", round(normEssent, 2))) -> orderFunctional
+
+
+data.essentiality |> 
+  filter(section == "Functional") |> 
+  mutate(name = factor(name, levels = orderFunctional$name)) |> 
+  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
+            fill = "continent", 
+            rotate = T, 
+            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 2,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+  ylim(-0.16, 1)+
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  theme_pubr(base_size = textSize*2) + 
+  theme(legend.position = "top", legend.title=element_blank()) 
+```
+
+### Treatment recommendations
+
+```{r plotTreatments, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+data.essentiality |> 
+  filter(section == "Treatment") |> 
+  filter(continent == "Worldwide") |> 
+  arrange(normEssent) |> 
+  mutate(label = paste0(name, ", SE = ", round(normEssent, 2))) -> orderTreatment
+
+
+data.essentiality |> 
+  filter(section == "Treatment") |> 
+  mutate(name = factor(name, levels = orderTreatment$name)) |> 
+  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
+            fill = "continent", 
+            rotate = T, 
+            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 2,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+#  ylim(-0.16, 1)+
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  theme_pubr(base_size = textSize) +
+  theme(legend.position = "top", legend.title=element_blank()) 
+```
+
+### Clinical trials
+
+```{r plotClinicalTrials, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+data.essentiality |> 
+  filter(group == "clinical trial") |> 
+  filter(continent == "Worldwide") |> 
+  arrange(normEssent) |> 
+  pull(name) -> listPlot
+
+
+data.essentiality |> 
+  filter(group == "clinical trial") |> 
+  mutate(name = factor(name, levels = listPlot)) |> 
+  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
+            fill = "continent", 
+            rotate = T, 
+            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 2,
+            xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
+#  ylim(-0.16, 1)+
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
+  theme_pubr(base_size = textSize*2) + 
+  theme(legend.position = "top", legend.title=element_blank())
+```
+
+# Reporting
+
+## Row {.tabset}
+
+```{r calcReported}
+responses.reported <- c("No Response", "Not Reported", "Reported")
+data |> 
+  filter(class == "Report") |> 
+  group_by(continent, name, group, section) |> 
+  count(value) |> 
+  pivot_wider(names_from = value, values_from = n) |> 
+  left_join(nrResp |> pivot_longer(everything(), names_to = "continent")) |> 
+  mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
+         `No Response` = value - sumResponses) |> 
+  mutate(percReported = Reported / sumResponses*100) -> data.reported
+
+data |> 
+  filter(class == "Report") |> 
+  group_by(name, group, section) |> 
+  count(value) |> 
+  pivot_wider(names_from = value, values_from = n) |> 
+  mutate(value = nrResp |> as_vector() |> sum()) |> 
+  mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
+         `No Response` = value - sumResponses) |> 
+  mutate(percReported = Reported / sumResponses*100) |> 
+  mutate(continent = "Worldwide") |> 
+  bind_rows(data.reported) -> data.reported
+
+```
+
+### General Information on NGS analysis
+
+```{r reportOverview, fig.width=20, fig.height=10}
+data.essentiality |> 
+  filter(section == "Overview") |> 
+  left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
+  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  # Hover text:
+  text = ~paste(name),
+  color = ~continent, size = 4
+) |> 
+  plotly::layout(showlegend = FALSE, 
+                 xaxis = list(title = "Score of Essentiality (SE)"), 
+                 yaxis = list(title = "% Reported"),
+                 shapes = list(list(
+    type = "line", 
+    x0 = 0, 
+    x1 = 1, 
+    xref = "x",
+    y0 = 0, 
+    y1 = 100,
+    yref = "y",
+    line = list(color = "grey23", dash="dashdot")
+  ))) -> p1
+
+data.reported |> 
+  filter(section == "Overview") |> 
+  pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") |> 
+  mutate(percent = round(count/value*100, 2)) |> 
+  mutate(name = factor(name, levels = rev(orderOverview$name))) |> 
+  ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderOverview$label)),
+            ylab = "% Reported", xlab = "") + 
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "none") -> p2
+
+plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "% Reported")), titleX = TRUE, titleY = TRUE)
+
+```
+
+### Overview of variant reporting
+
+```{r reportVariants, fig.width=20, fig.height=10}
+data.essentiality |> 
+  filter(section == "Variants") |> 
+  left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
+  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  # Hover text:
+  text = ~paste(name),
+  color = ~continent, size = 4
+) |> 
+  plotly::layout(showlegend = FALSE, 
+                 xaxis = list(title = "Score of Essentiality (SE)"), 
+                 yaxis = list(title = "% Reported"),
+                 shapes = list(list(
+    type = "line", 
+    x0 = 0, 
+    x1 = 1, 
+    xref = "x",
+    y0 = 0, 
+    y1 = 100,
+    yref = "y",
+    line = list(color = "grey23", dash="dashdot")
+  ))) -> p1
+
+data.reported |> 
+  filter(section == "Variants") |> 
+  pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") |> 
+  mutate(percent = round(count/value*100, 2)) |> 
+  mutate(name = factor(name, levels = rev(orderVariants$name))) |> 
+  ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderVariants$label)),
+            ylab = "% Reported", xlab = "") + 
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "none") -> p2
+
+plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "% Reported")), titleX = TRUE, titleY = TRUE)
+
+```
+
+### Overview of functional assessment
+
+```{r reportFunctional, fig.width=20, fig.height=10}
+data.essentiality |> 
+  filter(section == "Functional") |> 
+  left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
+  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  # Hover text:
+  text = ~paste(name),
+  color = ~continent, size = 4
+) |> 
+  plotly::layout(showlegend = FALSE, 
+                 xaxis = list(title = "Score of Essentiality (SE)"), 
+                 yaxis = list(title = "% Reported"),
+                 shapes = list(list(
+    type = "line", 
+    x0 = 0, 
+    x1 = 1, 
+    xref = "x",
+    y0 = 0, 
+    y1 = 100,
+    yref = "y",
+    line = list(color = "grey23", dash="dashdot")
+  ))) -> p1
+
+data.reported |> 
+  filter(section == "Functional") |> 
+  pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") |> 
+  mutate(percent = round(count/value*100, 2)) |> 
+  mutate(name = factor(name, levels = rev(orderFunctional$name))) |> 
+  ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderFunctional$label)),
+            ylab = "% Reported", xlab = "") + 
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "none") -> p2
+
+plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "% Reported")), titleX = TRUE, titleY = TRUE)
+```
+
+### Treatment recommendations
+
+```{r reportTreatment, fig.width=10, fig.height=10}
+data.essentiality |> 
+  filter(section == "Treatment") |> 
+  left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
+  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  # Hover text:
+  text = ~paste(name),
+  color = ~continent, size = 4
+) |> 
+  plotly::layout(showlegend = FALSE, 
+                 xaxis = list(title = "Score of Essentiality (SE)"), 
+                 yaxis = list(title = "% Reported"),
+                 shapes = list(list(
+    type = "line", 
+    x0 = 0, 
+    x1 = 1, 
+    xref = "x",
+    y0 = 0, 
+    y1 = 100,
+    yref = "y",
+    line = list(color = "grey23", dash="dashdot")
+  ))) -> p1
+
+data.reported |> 
+  filter(section == "Treatment") |> 
+  pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") |> 
+  mutate(percent = round(count/value*100, 2)) |> 
+  mutate(name = factor(name, levels = rev(orderTreatment$name))) |> 
+  ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderTreatment$label)),
+            ylab = "% Reported", xlab = "") +
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "None") ->p2
+
+plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "% Reported")), titleX = TRUE, titleY = TRUE)
+```
+
+# Data
+
+## Column {.tabset data-width="300"}
+
+### Distribution of Participants
+
+```{r tableParticipants}
+sum.country |> 
+  arrange(desc(n)) |> 
+  datatable(caption = "Overview of the number of survey responses for each country.", colnames = c('Country' = 'region', '# Participants' = 'n'), rownames = F)  
+```
+
+## Column {.tabset data-width="700"}
+
+### Calculation for Score of Essentiality
+
+```{r tableEssentiality}
+data.essentiality |> 
+  datatable(caption = "Overview of the essentiality fore each element in the survey calculated by continent.", colnames = c('Survey section'='section', 'Survey group' = 'group', 'Survey element' = 'name', '# Responses' = 'totEssent', 'Sum of Essentiality' = 'sumEssent', 'Score of Essentiality (SE)' = 'normEssent', 'Continent' = 'continent' ) , rownames = F) |> 
+  formatRound('Score of Essentiality (SE)', 2)
+```
+
+# Methods
+
+### Preparing a comprehensive survey regarding reporting practices
+
+The survey was based on report examples from presentations from the VICC-VMTB working group and publicly available reports from companies (supp. Table S7). General information on the tumor entity, the reported variants, their functional assessments, and treatment recommendations was requested. Most questions were related to single nucleotide variants. Furthermore, the survey covered aspects of how clinical trials are reported and more complex information, such as mutational signatures. Participants could also provide more context in free form. For each component in the survey, we asked two questions: First, whether the participants defined an element as essential. And second, whether the participant reported this element in their molecular reports. For preprocessing of survey data, the country names were cleaned and harmonized to allow grouping by region. Seven participants filled out the survey twice throughout the project. For the analysis, the most recent response has been selected.
+
+### Defining a score of essentiality to summarize results
+
+Each element of an NGS report was defined as a) essential (E), b) preferred, but not essential (P), or c) not recommended (N). The responses were summarized as an essentiality score (SE), which is normalized between the range of -1 (not essential) and 1 (essential):
+
+$$
+SE = \frac{(E+ 0.5\cdot P − N)}{\text{#responses}}
+$$
+
+This score allowed the comparison of responses from different survey response cohorts (e.g., continents, work settings), independent of the number of participants.
+
+Universally essential reporting elements were defined by having essentiality scores \>0.75 for all study cohorts (Europe, North America, Other, Worldwide). Worldwide scores represented the cumulative score of all survey data, regardless of geographical region.
+
+In the questionnaire, five areas of molecular reporting were addressed: general information on NGS reporting, variant details, functional assessment, treatment recommendations, and clinical trials. Based on previous discussions, we assumed that in each area at least one element would be essential on a global scale. We therefore defined a threshold (SE = 0.75) to reflect that.
+
+SE and RP were compared, and differences between the reported elements and essential elements were identified.
