@@ -1,12 +1,12 @@
 ---
 title: "An International Landscape of Cancer NGS Reporting Practices"
 format: dashboard
-#output-dir: docs
 #theme:
 #  bg: "#fdfdfd"
 #  fg: "#18252b" 
 #  primary: "#18252b"
 html-math-method: mathml
+keep-md: true
 ---
 
 ```{r setup, include=FALSE}
@@ -55,11 +55,9 @@ Next Generation Sequencing (NGS) is increasingly used in routine clinical oncolo
 ## Row
 
 ### Global representation of survey responses
-
-```{r}
-##| label: fig-participants
-##| fig-cap: !expr paste0("Overview of survey responses across the globe. Most respondents represented laboratories in North America (n = ", nrResp$`North America`,") and Europe (n = ", nrResp$Europe,"), with additional responses from other countries (n = ", nrResp$Other,"). ")
-
+```{r participants}
+#| fig-cap: !expr paste0("Overview of survey responses across the globe. Most respondents represented laboratories in North America (n = ", nrResp$`North America`,") and Europe (n = ", nrResp$Europe,"), with additional responses from other countries (n = ", nrResp$Other,"). ")
+# 
 data |> 
   select(region, ID, continent) |> 
   distinct() |> 
@@ -102,6 +100,8 @@ leaflet(world_data, options = leafletOptions(worldCopyJump = FALSE)) |>
 ### Types of tumors analysed
 
 ```{r plotTumortypes}
+#| fig-cap: Overview tumor types for which NGS report are prepared from participants.
+#
 cancer.factor <- rev(c("Solid Tumor", "Hematologic Malignancies", 
                        "Both", "Both (only pediatric cancer)", "Other", "Not specified"))
 data |> 
@@ -125,8 +125,10 @@ plotly::ggplotly(plot.cancer)
 
 ### Background of participants
 
-```{r institutes)}
+
+```{r institutes}
 #| fig-cap: Histogram of participant work settings at a clinical, commercial, and/or academic setting.
+#
 org.factor <- c("Clinical/Hospital Laboratory", "Commercial Laboratory", "Academic/Research Laboratory", "Other")
 data |> 
   filter(name == "organization") |> 
@@ -167,7 +169,8 @@ upsetjs(sizingPolicy = upsetjsSizingPolicy()) |>
 
 ### General Information on NGS analysis
 
-```{r plotOverview, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+```{r plotOverview}
+#| fig-cap: "Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent."
 data.essentiality |> 
   filter(section == "Overview", continent == "Worldwide") |> 
   arrange(normEssent) |> 
@@ -179,18 +182,21 @@ data.essentiality |>
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
-            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 2,
+            label = TRUE, lab.size = textSize/6, lab.nb.digits = 2, lab.pos = "in", lab.col = "white",
+            lab.vjust = 0.5, lab.hjust = 4,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
 #  ylim(-0.16, 1)+
-  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
-  theme_pubr(base_size = textSize*2) + 
-  theme(legend.position = "top", legend.title=element_blank()) 
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 1) +
+  theme_pubr(base_size = textSize/2) + 
+  theme(legend.position = "top", legend.title=element_blank()) -> plot.overview
+plotly::ggplotly(plot.overview)# |> plotly::layout(xaxis = list(hoverformat = '.2f'))
 ```
 
 ### Overview of variant reporting
 
-```{r plotVariants, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+```{r plotVariants} 
+#| fig-cap: "Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent."
+#
 data.essentiality |> 
   filter(section == "Variants") |> 
   filter(continent == "Worldwide") |> 
@@ -203,18 +209,21 @@ data.essentiality |>
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
-            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 2,
+            label = TRUE, lab.size = textSize/6, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 4,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
 #  ylim(-0.16, 1)+
   geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
-  theme_pubr(base_size = textSize*2) + 
-  theme(legend.position = "top", legend.title=element_blank()) 
+  theme_pubr(base_size = textSize/2) + 
+  theme(legend.position = "top", legend.title=element_blank()) -> plot.variants
+plotly::ggplotly(plot.variants)
 ```
 
 ### Overview of functional assessment
 
-```{r plotFunctional, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+```{r plotFunctional}
+#| fig-cap: "Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent."
+#
 data.essentiality |> 
   filter(section == "Functional") |> 
   filter(continent == "Worldwide") |> 
@@ -228,18 +237,21 @@ data.essentiality |>
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
-            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 2,
+            label = TRUE, lab.size = textSize/6, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            lab.vjust = 0.5, lab.hjust = 4,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
   ylim(-0.16, 1)+
   geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
-  theme_pubr(base_size = textSize*2) + 
-  theme(legend.position = "top", legend.title=element_blank()) 
+  theme_pubr(base_size = textSize/2) + 
+  theme(legend.position = "top", legend.title=element_blank()) -> plot.functional
+plotly::ggplotly(plot.functional) 
 ```
 
 ### Treatment recommendations
 
-```{r plotTreatments, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+```{r plotTreatments}
+#| fig-cap: "Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent."
+#
 data.essentiality |> 
   filter(section == "Treatment") |> 
   filter(continent == "Worldwide") |> 
@@ -253,18 +265,21 @@ data.essentiality |>
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
-            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            label = TRUE, lab.size = textSize/6, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
             lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
 #  ylim(-0.16, 1)+
   geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
-  theme_pubr(base_size = textSize) +
-  theme(legend.position = "top", legend.title=element_blank()) 
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "top", legend.title=element_blank()) -> plot.functional
+plotly::ggplotly(plot.functional) 
 ```
 
 ### Clinical trials
 
-```{r plotClinicalTrials, fig.width=40, fig.height=20, fig.cap=("Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent.")}
+```{r plotClinical}
+#| fig-cap: "Participants were asked whether each of the data elements above was considered essential on NGS reports. A score of essentiality was calculated from these responses and is displayed by region of respondent."
+#
 data.essentiality |> 
   filter(group == "clinical trial") |> 
   filter(continent == "Worldwide") |> 
@@ -278,13 +293,14 @@ data.essentiality |>
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
-            label = TRUE, lab.size = textSize/3, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
+            label = TRUE, lab.size = textSize/6, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
             lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
 #  ylim(-0.16, 1)+
   geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
-  theme_pubr(base_size = textSize*2) + 
-  theme(legend.position = "top", legend.title=element_blank())
+  theme_pubr(base_size = textSize/2) + 
+  theme(legend.position = "top", legend.title=element_blank())-> plot.functional
+plotly::ggplotly(plot.functional) 
 ```
 
 # Reporting
@@ -319,7 +335,9 @@ data |>
 
 ### General Information on NGS analysis
 
-```{r reportOverview, fig.width=20, fig.height=10}
+```{r reportOverview}
+#| fig-cap: Concordance between the score of essentiality (SE; x-axis) and actual reporting  for general information on NGS analysis (left). Summary of reporting practices for general information on NGS analysis (right). Results are shown for all participants (dark red), North America (turquoise), Europe (black), and participants from other countries (gray).
+#
 data.essentiality |> 
   filter(section == "Overview") |> 
   left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
@@ -360,7 +378,9 @@ plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showle
 
 ### Overview of variant reporting
 
-```{r reportVariants, fig.width=20, fig.height=10}
+```{r reportVariants}
+#| fig-cap: Concordance between the score of essentiality (SE; x-axis) and actual reporting  for variant reporting (left). Summary of reporting practices for variants (right). Results are shown for all participants (dark red), North America (turquoise), Europe (black), and participants from other countries (gray).
+#
 data.essentiality |> 
   filter(section == "Variants") |> 
   left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
@@ -402,6 +422,8 @@ plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showle
 ### Overview of functional assessment
 
 ```{r reportFunctional, fig.width=20, fig.height=10}
+#| fig-cap: Concordance between the score of essentiality (SE; x-axis) and actual reporting  for functional assessment of variants (left). Summary of reporting practices for functional assessment (right). Results are shown for all participants (dark red), North America (turquoise), Europe (black), and participants from other countries (gray).
+#
 data.essentiality |> 
   filter(section == "Functional") |> 
   left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
@@ -442,6 +464,8 @@ plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showle
 ### Treatment recommendations
 
 ```{r reportTreatment, fig.width=10, fig.height=10}
+#| fig-cap: Concordance between the score of essentiality (SE; x-axis) and actual reporting  for treatment recommendations (left). Summary of reporting practices for treatment recommendations (right). Results are shown for all participants (dark red), North America (turquoise), Europe (black), and participants from other countries (gray).
+#
 data.essentiality |> 
   filter(section == "Treatment") |> 
   left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
