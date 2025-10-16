@@ -6,7 +6,6 @@ format: dashboard
 #  fg: "#18252b" 
 #  primary: "#18252b"
 html-math-method: mathml
-keep-md: true
 ---
 
 ```{r setup, include=FALSE}
