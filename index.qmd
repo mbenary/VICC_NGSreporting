@@ -1,5 +1,6 @@
 ---
 title: "An International Landscape of Cancer NGS Reporting Practices"
+date: 2025-10-17
 format: dashboard
 #theme:
 #  bg: "#fdfdfd"
@@ -294,27 +295,30 @@ plotly::ggplotly(plot.functional, tooltip = c("y", "fill"))
 
 ```{r calcReported}
 responses.reported <- c("No Response", "Not Reported", "Reported")
-data |> 
-  filter(class == "Report") |> 
-  group_by(continent, name, group, section) |> 
-  count(value) |> 
-  pivot_wider(names_from = value, values_from = n) |> 
-  left_join(nrResp |> pivot_longer(everything(), names_to = "continent")) |> 
-  mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
-         `No Response` = value - sumResponses) |> 
-  mutate(percReported = Reported / sumResponses*100) -> data.reported
-
-data |> 
-  filter(class == "Report") |> 
-  group_by(name, group, section) |> 
-  count(value) |> 
-  pivot_wider(names_from = value, values_from = n) |> 
-  mutate(value = nrResp |> as_vector() |> sum()) |> 
-  mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
-         `No Response` = value - sumResponses) |> 
-  mutate(percReported = Reported / sumResponses*100) |> 
-  mutate(continent = "Worldwide") |> 
-  bind_rows(data.reported) -> data.reported
+#data |> 
+#  filter(class == "Report") |> 
+#  group_by(continent, name, group, section) |> 
+#  count(value) |> 
+#  pivot_wider(names_from = value, values_from = n) |> 
+#  left_join(nrResp |> pivot_longer(everything(), names_to = "continent")) |> 
+#  mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
+#         `No Response` = value - sumResponses) |> 
+#  mutate(percReported = Reported / sumResponses*100) -> data.reported
+#
+#data |> 
+#  filter(class == "Report") |> 
+#  group_by(name, group, section) |> 
+#  count(value) |> 
+#  pivot_wider(names_from = value, values_from = n) |> 
+# mutate(value = nrResp |> as_vector() |> sum()) |> 
+#  mutate(sumResponses = sum(Reported, `Not Reported`, na.rm = T),
+#         `No Response` = value - sumResponses) |> 
+#  mutate(percReported = Reported / sumResponses*100) |> 
+#  mutate(percent = round(count/value*100, 2)) |> 
+#  mutate(continent = "Worldwide") |> 
+#  bind_rows(data.reported) -> data.reported
+data.reported |> 
+  mutate(percReported = percReported*100) -> data.reported
 
 ```
 
@@ -333,8 +337,8 @@ data.essentiality |>
   color = ~continent, size = 4
 ) |> 
   plotly::layout(showlegend = FALSE, 
-                 xaxis = list(title = "Score of Essentiality (SE)"), 
-                 yaxis = list(title = "% Reported"),
+                 xaxis = list(title = "Score of Essentiality (SE)", hoverformat = '.2f'), 
+                 yaxis = list(title = "% Reported", hoverformat = '.2f'),
                  shapes = list(list(
     type = "line", 
     x0 = 0, 
@@ -348,10 +352,10 @@ data.essentiality |>
 
 data.reported |> 
   filter(section == "Overview") |> 
+  mutate(percReported = round(percReported, 2)) |> 
   pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") |> 
-  mutate(percent = round(count/value*100, 2)) |> 
   mutate(name = factor(name, levels = rev(orderOverview$name))) |> 
-  ggbarplot(y = "percent", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
+  ggbarplot(y = "percReported", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
             rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderOverview$label)),
             ylab = "% Reported", xlab = "") + 
   theme_pubr(base_size = textSize/2) +
@@ -376,8 +380,8 @@ data.essentiality |>
   color = ~continent, size = 4
 ) |> 
   plotly::layout(showlegend = FALSE, 
-                 xaxis = list(title = "Score of Essentiality (SE)"), 
-                 yaxis = list(title = "% Reported"),
+                 xaxis = list(title = "Score of Essentiality (SE)", hoverformat = '.2f'), 
+                 yaxis = list(title = "% Reported", hoverformat = '.2f'),
                  shapes = list(list(
     type = "line", 
     x0 = 0, 
@@ -419,8 +423,8 @@ data.essentiality |>
   color = ~continent, size = 4
 ) |> 
   plotly::layout(showlegend = FALSE, 
-                 xaxis = list(title = "Score of Essentiality (SE)"), 
-                 yaxis = list(title = "% Reported"),
+                 xaxis = list(title = "Score of Essentiality (SE)", hoverformat = '.2f'), 
+                 yaxis = list(title = "% Reported", hoverformat = '.2f'),
                  shapes = list(list(
     type = "line", 
     x0 = 0, 
@@ -461,8 +465,8 @@ data.essentiality |>
   color = ~continent, size = 4
 ) |> 
   plotly::layout(showlegend = FALSE, 
-                 xaxis = list(title = "Score of Essentiality (SE)"), 
-                 yaxis = list(title = "% Reported"),
+                 xaxis = list(title = "Score of Essentiality (SE)", hoverformat = '.2f'), 
+                 yaxis = list(title = "% Reported", hoverformat = '.2f'),
                  shapes = list(list(
     type = "line", 
     x0 = 0, 
