@@ -6,6 +6,8 @@ format: dashboard
 #  fg: "#18252b" 
 #  primary: "#18252b"
 html-math-method: mathml
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -175,17 +177,15 @@ data.essentiality |>
 data.essentiality |> 
   filter(section == "Overview") |> 
   mutate(name = factor(name, levels = orderOverview$name)) |> 
+  mutate(normEssent = round(normEssent, 3)) |> 
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
-            label = TRUE, lab.size = textSize/6, lab.nb.digits = 2, lab.pos = "in", lab.col = "white",
-            lab.vjust = 0.5, lab.hjust = 4,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-#  ylim(-0.16, 1)+
-  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 1) +
-  theme_pubr(base_size = textSize/2) + 
-  theme(legend.position = "top", legend.title=element_blank()) -> plot.overview
-plotly::ggplotly(plot.overview)# |> plotly::layout(xaxis = list(hoverformat = '.2f'))
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", linewidth = 1) +
+  theme_pubr(base_size = textSize/2) -> plot.overview
+plotly::ggplotly(plot.overview, tooltip = c("y", "fill"))
+
 ```
 
 ### Overview of variant reporting
@@ -202,17 +202,14 @@ data.essentiality |>
 data.essentiality |> 
   filter(section == "Variants") |> 
   mutate(name = factor(name, levels = orderVariants$name)) |> 
+  mutate(normEssent = round(normEssent, 3)) |> 
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
-            label = TRUE, lab.size = textSize/6, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 4,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-#  ylim(-0.16, 1)+
-  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
-  theme_pubr(base_size = textSize/2) + 
-  theme(legend.position = "top", legend.title=element_blank()) -> plot.variants
-plotly::ggplotly(plot.variants)
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 1) +
+  theme_pubr(base_size = textSize/2) -> plot.variants
+plotly::ggplotly(plot.variants, tooltip = c("y", "fill"))
 ```
 
 ### Overview of functional assessment
@@ -230,17 +227,15 @@ data.essentiality |>
 data.essentiality |> 
   filter(section == "Functional") |> 
   mutate(name = factor(name, levels = orderFunctional$name)) |> 
+  mutate(normEssent = round(normEssent, 3)) |> 
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
-            label = TRUE, lab.size = textSize/6, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 4,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
   ylim(-0.16, 1)+
-  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
-  theme_pubr(base_size = textSize/2) + 
-  theme(legend.position = "top", legend.title=element_blank()) -> plot.functional
-plotly::ggplotly(plot.functional) 
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 1) +
+  theme_pubr(base_size = textSize/2) -> plot.functional
+plotly::ggplotly(plot.functional, tooltip = c("y", "fill")) 
 ```
 
 ### Treatment recommendations
@@ -258,17 +253,14 @@ data.essentiality |>
 data.essentiality |> 
   filter(section == "Treatment") |> 
   mutate(name = factor(name, levels = orderTreatment$name)) |> 
+  mutate(normEssent = round(normEssent, 3)) |> 
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
-            label = TRUE, lab.size = textSize/6, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-#  ylim(-0.16, 1)+
-  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
-  theme_pubr(base_size = textSize/2) +
-  theme(legend.position = "top", legend.title=element_blank()) -> plot.functional
-plotly::ggplotly(plot.functional) 
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 1) +
+  theme_pubr(base_size = textSize/2)  -> plot.functional
+plotly::ggplotly(plot.functional, tooltip = c("y", "fill")) 
 ```
 
 ### Clinical trials
@@ -286,17 +278,14 @@ data.essentiality |>
 data.essentiality |> 
   filter(group == "clinical trial") |> 
   mutate(name = factor(name, levels = listPlot)) |> 
+  mutate(normEssent = round(normEssent, 3)) |> 
   ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
             fill = "continent", 
             rotate = T, 
-            label = TRUE, lab.size = textSize/6, lab.nb.digits = 2, lab.pos = "in", lab.col = "white", 
-            lab.vjust = 0.5, lab.hjust = 2,
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-#  ylim(-0.16, 1)+
-  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 2) +
-  theme_pubr(base_size = textSize/2) + 
-  theme(legend.position = "top", legend.title=element_blank())-> plot.functional
-plotly::ggplotly(plot.functional) 
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 1) +
+  theme_pubr(base_size = textSize/2) -> plot.functional
+plotly::ggplotly(plot.functional, tooltip = c("y", "fill")) 
 ```
 
 # Reporting
