@@ -12,16 +12,10 @@ html-math-method: mathml
 library(tidyverse)
 library(flextable)
 library(ggpubr)
-library(ggpmisc)
-library(ggrepel)
-library(DT)
-library(ComplexUpset)
 library(upsetjs)
-library(sf)
-library(cowplot)
-library(grid)
 library(ggplotify)
 library(leaflet)
+library(DT)
 ```
 
 ```{r load-data, include=FALSE}
@@ -115,7 +109,6 @@ data |>
   filter(cancer_type != "Not specified") |> 
   ggbarplot(x = "cancer_type", y = "n", fill = "grey23", 
             ylab = "# Responses", xlab = "", rotate = T) +
-  #scale_fill_continuous(low="thistle2", high="darkred") +
   theme_pubr(base_size = textSize/2) +
   theme(legend.position = "none") -> plot.cancer
 plotly::ggplotly(plot.cancer)
@@ -128,7 +121,9 @@ plotly::ggplotly(plot.cancer)
 ```{r institutes}
 #| fig-cap: Histogram of participant work settings at a clinical, commercial, and/or academic setting.
 #
-org.factor <- c("Clinical/Hospital Laboratory", "Commercial Laboratory", "Academic/Research Laboratory", "Other")
+org.factor <- c("Clinical", "Commercial", "Research", "Other")
+names(org.factor) <- c("Clinical/Hospital Laboratory", "Commercial Laboratory", "Academic/Research Laboratory", "Other")
+
 data |> 
   filter(name == "organization") |> 
   select(ID, name, value) |> 
@@ -136,6 +131,7 @@ data |>
   group_by(ID) |> 
   mutate(org = 1:n()) |> 
   mutate(org = paste0("org", org, sep="")) |> 
+  mutate(value = recode(value, !!!org.factor)) |> 
   pivot_wider(names_from = org, values_from = value) |> 
   select(-name) |> 
   mutate(org1 = ifelse(org1 %in% org.factor, org1, "Other")) |> 
@@ -149,6 +145,7 @@ data |>
   filter(name == "organization") |> 
   select(ID, name, value) |> 
   distinct() |> 
+  mutate(value = recode(value, !!!org.factor)) |> 
   pivot_wider(names_from = name, values_from = value) |> 
   unnest(organization) |> 
   mutate(organization = ifelse(organization %in% org.factor, organization, "Other")) |> 
