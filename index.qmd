@@ -1,6 +1,6 @@
 ---
 title: "An International Landscape of Cancer NGS Reporting Practices"
-date: 2025-10-17
+date: 2026-04-20
 format:
   dashboard:
     html-math-method: mathml
@@ -32,7 +32,7 @@ data.reported.europe <- read_csv("data/NGSreportElementsReportedEurope.csv")
 data |> 
   select(continent, ID) |> 
   distinct() |> 
-  count(continent) |> 
+  count(continent) |>  
   pivot_wider(names_from = "continent", values_from = "n") -> nrResp
 ```
 
@@ -402,28 +402,49 @@ data.reported |>
 ```{r reportOverview}
 #| fig-cap: Concordance between the score of essentiality (SE; x-axis) and actual reporting  for general information on NGS analysis (left). Summary of reporting practices for general information on NGS analysis (right). Results are shown for all participants (dark red), North America (turquoise), Europe (black), and participants from other countries (gray).
 #
+
 data.essentiality |> 
   filter(section == "Overview") |> 
-  left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
-  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
-  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  left_join(data.reported, by = c("group", "section", "name", "continent")) -> df
+
+cor_labels <- df |>
+  group_by(continent) |>
+  summarise(
+    r   = cor(normEssent, percReported, use = "complete.obs"),
+    pval = cor.test(normEssent, percReported)$p.value,
+    .groups = "drop"
+  ) |>
+  mutate(
+    label = paste0("r = ", round(r, 2), ", p = ", signif(pval, 2))
+  )
+
+annotations <- lapply(seq_len(nrow(cor_labels)), function(i) {
+  list(
+    x         = 0.2,
+    y         = max(df$percReported, na.rm = TRUE) * (0.99 - (i - 1) * 0.02),
+    text      = paste0("<b>", cor_labels$continent[i], ":</b> ", cor_labels$label[i]),
+    showarrow = FALSE,
+    xref      = "x",
+    yref      = "y",
+    font      = list(color = palContinents[i], size = 12)
+  )
+})
+
+df |> 
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers', text=~name,
   # Hover text:
-  text = ~paste(name),
+  hovertemplate = paste0(
+      "<b>%{text}</b><br>",
+      "Essentiality: %{x:.2f}<br>",
+      "Reported: %{y:.2f%}<extra></extra>"
+    ),
   color = ~continent, size = 4
 ) |> 
   plotly::layout(showlegend = FALSE, 
                  xaxis = list(title = "Score of Essentiality (SE)", hoverformat = '.2f'), 
                  yaxis = list(title = "% Reported", hoverformat = '.2f'),
-                 shapes = list(list(
-    type = "line", 
-    x0 = 0, 
-    x1 = 1, 
-    xref = "x",
-    y0 = 0, 
-    y1 = 100,
-    yref = "y",
-    line = list(color = "grey23", dash="dashdot")
-  ))) -> p1
+                 annotations = annotations) -> p1
+
 
 data.reported |> 
   filter(section == "Overview") |> 
@@ -436,7 +457,7 @@ data.reported |>
   theme_pubr(base_size = textSize/2) +
   theme(legend.position = "none") -> p2
 
-plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "% Reported")), titleX = TRUE, titleY = TRUE)
+plotly::subplot(margin = 0.07, p1,  plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "% Reported")), titleX = TRUE, titleY = TRUE)
 
 ```
 
@@ -445,28 +466,48 @@ plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showle
 ```{r reportVariants}
 #| fig-cap: Concordance between the score of essentiality (SE; x-axis) and actual reporting  for variant reporting (left). Summary of reporting practices for variants (right). Results are shown for all participants (dark red), North America (turquoise), Europe (black), and participants from other countries (gray).
 #
+
 data.essentiality |> 
   filter(section == "Variants") |> 
-  left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
-  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
-  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  left_join(data.reported, by = c("group", "section", "name", "continent")) -> df
+
+cor_labels <- df |>
+  group_by(continent) |>
+  summarise(
+    r   = cor(normEssent, percReported, use = "complete.obs"),
+    pval = cor.test(normEssent, percReported)$p.value,
+    .groups = "drop"
+  ) |>
+  mutate(
+    label = paste0("r = ", round(r, 2), ", p = ", signif(pval, 2))
+  )
+
+annotations <- lapply(seq_len(nrow(cor_labels)), function(i) {
+  list(
+    x         = 0.2,
+    y         = max(df$percReported, na.rm = TRUE) * (0.99 - (i - 1) * 0.02),
+    text      = paste0("<b>", cor_labels$continent[i], ":</b> ", cor_labels$label[i]),
+    showarrow = FALSE,
+    xref      = "x",
+    yref      = "y",
+    font      = list(color = palContinents[i], size = 12)
+  )
+})
+
+df |> 
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers', text=~name,
   # Hover text:
-  text = ~paste(name),
+  hovertemplate = paste0(
+      "<b>%{text}</b><br>",
+      "Essentiality: %{x:.2f}<br>",
+      "Reported: %{y:.2f%}<extra></extra>"
+    ),
   color = ~continent, size = 4
 ) |> 
   plotly::layout(showlegend = FALSE, 
                  xaxis = list(title = "Score of Essentiality (SE)", hoverformat = '.2f'), 
                  yaxis = list(title = "% Reported", hoverformat = '.2f'),
-                 shapes = list(list(
-    type = "line", 
-    x0 = 0, 
-    x1 = 1, 
-    xref = "x",
-    y0 = 0, 
-    y1 = 100,
-    yref = "y",
-    line = list(color = "grey23", dash="dashdot")
-  ))) -> p1
+                 annotations = annotations) -> p1
 
 data.reported |> 
   filter(section == "Variants") |> 
@@ -488,28 +529,48 @@ plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showle
 ```{r reportFunctional, fig.width=20, fig.height=10}
 #| fig-cap: Concordance between the score of essentiality (SE; x-axis) and actual reporting  for functional assessment of variants (left). Summary of reporting practices for functional assessment (right). Results are shown for all participants (dark red), North America (turquoise), Europe (black), and participants from other countries (gray).
 #
+
 data.essentiality |> 
   filter(section == "Functional") |> 
-  left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
-  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
-  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  left_join(data.reported, by = c("group", "section", "name", "continent")) -> df
+
+cor_labels <- df |>
+  group_by(continent) |>
+  summarise(
+    r   = cor(normEssent, percReported, use = "complete.obs"),
+    pval = cor.test(normEssent, percReported)$p.value,
+    .groups = "drop"
+  ) |>
+  mutate(
+    label = paste0("r = ", round(r, 2), ", p = ", signif(pval, 2))
+  )
+
+annotations <- lapply(seq_len(nrow(cor_labels)), function(i) {
+  list(
+    x         = 0.2,
+    y         = max(df$percReported, na.rm = TRUE) * (0.99 - (i - 1) * 0.02),
+    text      = paste0("<b>", cor_labels$continent[i], ":</b> ", cor_labels$label[i]),
+    showarrow = FALSE,
+    xref      = "x",
+    yref      = "y",
+    font      = list(color = palContinents[i], size = 12)
+  )
+})
+
+df |> 
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers', text=~name,
   # Hover text:
-  text = ~paste(name),
+  hovertemplate = paste0(
+      "<b>%{text}</b><br>",
+      "Essentiality: %{x:.2f}<br>",
+      "Reported: %{y:.2f%}<extra></extra>"
+    ),
   color = ~continent, size = 4
 ) |> 
   plotly::layout(showlegend = FALSE, 
                  xaxis = list(title = "Score of Essentiality (SE)", hoverformat = '.2f'), 
                  yaxis = list(title = "% Reported", hoverformat = '.2f'),
-                 shapes = list(list(
-    type = "line", 
-    x0 = 0, 
-    x1 = 1, 
-    xref = "x",
-    y0 = 0, 
-    y1 = 100,
-    yref = "y",
-    line = list(color = "grey23", dash="dashdot")
-  ))) -> p1
+                 annotations = annotations) -> p1
 
 data.reported |> 
   filter(section == "Functional") |> 
@@ -530,28 +591,48 @@ plotly::subplot(margin = 0.07, p1, plotly::ggplotly(p2) |> plotly::layout(showle
 ```{r reportTreatment, fig.width=10, fig.height=10}
 #| fig-cap: Concordance between the score of essentiality (SE; x-axis) and actual reporting  for treatment recommendations (left). Summary of reporting practices for treatment recommendations (right). Results are shown for all participants (dark red), North America (turquoise), Europe (black), and participants from other countries (gray).
 #
+
 data.essentiality |> 
   filter(section == "Treatment") |> 
-  left_join(data.reported, by = c("group", "section", "name", "continent")) |> 
-  mutate(label = ifelse((continent == "Worldwide" & normEssent >= cutoff), name, "")) |> 
-  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers',
+  left_join(data.reported, by = c("group", "section", "name", "continent")) -> df
+
+cor_labels <- df |>
+  group_by(continent) |>
+  summarise(
+    r   = cor(normEssent, percReported, use = "complete.obs"),
+    pval = cor.test(normEssent, percReported)$p.value,
+    .groups = "drop"
+  ) |>
+  mutate(
+    label = paste0("r = ", round(r, 2), ", p = ", signif(pval, 2))
+  )
+
+annotations <- lapply(seq_len(nrow(cor_labels)), function(i) {
+  list(
+    x         = 0.2,
+    y         = max(df$percReported, na.rm = TRUE) * (0.99 - (i - 1) * 0.02),
+    text      = paste0("<b>", cor_labels$continent[i], ":</b> ", cor_labels$label[i]),
+    showarrow = FALSE,
+    xref      = "x",
+    yref      = "y",
+    font      = list(color = palContinents[i], size = 12)
+  )
+})
+
+df |> 
+  plotly::plot_ly(x = ~normEssent, y = ~percReported, colors=palContinents, type = 'scatter', mode = 'markers', text=~name,
   # Hover text:
-  text = ~paste(name),
+  hovertemplate = paste0(
+      "<b>%{text}</b><br>",
+      "Essentiality: %{x:.2f}<br>",
+      "Reported: %{y:.2f%}<extra></extra>"
+    ),
   color = ~continent, size = 4
 ) |> 
   plotly::layout(showlegend = FALSE, 
                  xaxis = list(title = "Score of Essentiality (SE)", hoverformat = '.2f'), 
                  yaxis = list(title = "% Reported", hoverformat = '.2f'),
-                 shapes = list(list(
-    type = "line", 
-    x0 = 0, 
-    x1 = 1, 
-    xref = "x",
-    y0 = 0, 
-    y1 = 100,
-    yref = "y",
-    line = list(color = "grey23", dash="dashdot")
-  ))) -> p1
+                 annotations = annotations) -> p1
 
 data.reported |> 
   filter(section == "Treatment") |> 
