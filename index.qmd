@@ -39,6 +39,7 @@ data |>
 
 ```{r colorScheme}
 palContinents <- c(Europe = "#283F46", `North America` = "#3aada8", Other = "gray", Worldwide = "#8B0000")
+responses.essential <- c("No response", "Not Recommended", "Preferred, non-essential", "Essential")
 
 textSize <- 24
 cutoff <- 0.75
@@ -179,15 +180,37 @@ data.essentiality |>
   filter(section == "Overview") |> 
   mutate(name = factor(name, levels = orderOverview$name)) |> 
   mutate(normEssent = round(normEssent, 3)) |> 
-  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
-            fill = "continent", 
+  ggbarplot(x = "continent", y = "normEssent", palette = palContinents, 
+            fill = "continent", facet.by = "name", ncol=1, scales = "free_y",
             rotate = T, 
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
   geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", linewidth = 1) +
   theme_pubr(base_size = textSize/2) -> plot.overview
-plotly::ggplotly(plot.overview, tooltip = c("y", "fill"))
 
+
+data |> 
+  filter(class == "Essentiality") |> 
+  pivot_wider(names_from = "class", values_from = "value") |> 
+  unnest(Essentiality) |> 
+  replace_na(list(Essentiality = "No response")) |> 
+  mutate(Essentiality = factor(Essentiality, levels = responses.essential)) -> data.response.essentiality
+
+data.response.essentiality |> 
+  filter(section == "Overview") |> 
+  group_by(continent, name) |> 
+  count(Essentiality, name = "count") |> 
+  mutate(name = factor(name, levels = orderOverview$name)) |> 
+  ggbarplot(y = "count", x = "continent", fill = "continent", alpha = "Essentiality", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), #panel.labs = list(name = rev(orderOverview$label)),
+            ylab = "# Participants", xlab = "") + 
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "none") -> p2
+
+plotly::subplot(margin = 0.07, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "# Participants")), plotly::ggplotly(plot.overview, tooltip = c("y", "fill")) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "Score of Essentiality")), titleX = TRUE, titleY = TRUE)
+
+  
 ```
+
 
 ### Overview of variant reporting
 
@@ -204,13 +227,27 @@ data.essentiality |>
   filter(section == "Variants") |> 
   mutate(name = factor(name, levels = orderVariants$name)) |> 
   mutate(normEssent = round(normEssent, 3)) |> 
-  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
-            fill = "continent", 
+  ggbarplot(x = "continent", y = "normEssent", palette = palContinents, 
+            fill = "continent", facet.by = "name", ncol=1, scales = "free_y",
             rotate = T, 
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 1) +
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", linewidth = 1) +
   theme_pubr(base_size = textSize/2) -> plot.variants
-plotly::ggplotly(plot.variants, tooltip = c("y", "fill"))
+
+
+data.response.essentiality |> 
+  filter(section == "Variants") |> 
+  group_by(continent, name) |> 
+  count(Essentiality, name = "count") |> 
+  mutate(name = factor(name, levels = orderVariants$name)) |> 
+  ggbarplot(y = "count", x = "continent", fill = "continent", alpha = "Essentiality", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), #panel.labs = list(name = rev(orderOverview$label)),
+            ylab = "# Participants", xlab = "") + 
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "none") -> p2
+
+plotly::subplot(margin = 0.07, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "# Participants")), plotly::ggplotly(plot.variants, tooltip = c("y", "fill")) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "Score of Essentiality")), titleX = TRUE, titleY = TRUE)
+
 ```
 
 ### Overview of functional assessment
@@ -229,14 +266,26 @@ data.essentiality |>
   filter(section == "Functional") |> 
   mutate(name = factor(name, levels = orderFunctional$name)) |> 
   mutate(normEssent = round(normEssent, 3)) |> 
-  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
-            fill = "continent", 
+  ggbarplot(x = "continent", y = "normEssent", palette = palContinents, 
+            fill = "continent", facet.by = "name", ncol=1, scales = "free_y",
             rotate = T, 
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-  ylim(-0.16, 1)+
-  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 1) +
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", linewidth = 1) +
   theme_pubr(base_size = textSize/2) -> plot.functional
-plotly::ggplotly(plot.functional, tooltip = c("y", "fill")) 
+
+
+data.response.essentiality |> 
+  filter(section == "Functional") |> 
+  group_by(continent, name) |> 
+  count(Essentiality, name = "count") |> 
+  mutate(name = factor(name, levels = orderFunctional$name)) |> 
+  ggbarplot(y = "count", x = "continent", fill = "continent", alpha = "Essentiality", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), #panel.labs = list(name = rev(orderOverview$label)),
+            ylab = "# Participants", xlab = "") + 
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "none") -> p2
+
+plotly::subplot(margin = 0.07, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "# Participants")), plotly::ggplotly(plot.functional, tooltip = c("y", "fill")) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "Score of Essentiality")), titleX = TRUE, titleY = TRUE)
 ```
 
 ### Treatment recommendations
@@ -255,13 +304,26 @@ data.essentiality |>
   filter(section == "Treatment") |> 
   mutate(name = factor(name, levels = orderTreatment$name)) |> 
   mutate(normEssent = round(normEssent, 3)) |> 
-  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
-            fill = "continent", 
+  ggbarplot(x = "continent", y = "normEssent", palette = palContinents, 
+            fill = "continent", facet.by = "name", ncol=1, scales = "free_y",
             rotate = T, 
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 1) +
-  theme_pubr(base_size = textSize/2)  -> plot.functional
-plotly::ggplotly(plot.functional, tooltip = c("y", "fill")) 
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", linewidth = 1) +
+  theme_pubr(base_size = textSize/2) -> plot.treatment
+
+
+data.response.essentiality |> 
+  filter(section == "Treatment") |> 
+  group_by(continent, name) |> 
+  count(Essentiality, name = "count") |> 
+  mutate(name = factor(name, levels = orderTreatment$name)) |> 
+  ggbarplot(y = "count", x = "continent", fill = "continent", alpha = "Essentiality", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), #panel.labs = list(name = rev(orderOverview$label)),
+            ylab = "# Participants", xlab = "") + 
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "none") -> p2
+
+plotly::subplot(margin = 0.07, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "# Participants")), plotly::ggplotly(plot.treatment, tooltip = c("y", "fill")) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "Score of Essentiality")), titleX = TRUE, titleY = TRUE)
 ```
 
 ### Clinical trials
@@ -280,13 +342,26 @@ data.essentiality |>
   filter(group == "clinical trial") |> 
   mutate(name = factor(name, levels = listPlot)) |> 
   mutate(normEssent = round(normEssent, 3)) |> 
-  ggbarplot(x = "name", y = "normEssent", palette = palContinents, 
-            fill = "continent", 
+  ggbarplot(x = "continent", y = "normEssent", palette = palContinents, 
+            fill = "continent", facet.by = "name", ncol=1, scales = "free_y",
             rotate = T, 
             xlab = "", ylab = "Score of Essentiality", position = position_dodge(0.9)) + 
-  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", size = 1) +
-  theme_pubr(base_size = textSize/2) -> plot.functional
-plotly::ggplotly(plot.functional, tooltip = c("y", "fill")) 
+  geom_hline(yintercept = cutoff, color = "#8B0000", lty = "dashed", linewidth = 1) +
+  theme_pubr(base_size = textSize/2) -> plot.trial
+
+
+data.response.essentiality |> 
+  filter(group == "clinical trial") |>  
+  group_by(continent, name) |> 
+  count(Essentiality, name = "count") |> 
+#  mutate(name = factor(name, levels = orderVariants$name)) |> 
+  ggbarplot(y = "count", x = "continent", fill = "continent", alpha = "Essentiality", facet.by = "name", palette = palContinents, ncol = 1,
+            rotate = T, order = names(palContinents), #panel.labs = list(name = rev(orderOverview$label)),
+            ylab = "# Participants", xlab = "") + 
+  theme_pubr(base_size = textSize/2) +
+  theme(legend.position = "none") -> p2
+
+plotly::subplot(margin = 0.07, plotly::ggplotly(p2) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "# Participants")), plotly::ggplotly(plot.trial, tooltip = c("y", "fill")) |> plotly::layout(showlegend = FALSE, xaxis = list(title = "Score of Essentiality")), titleX = TRUE, titleY = TRUE)
 ```
 
 # Reporting
@@ -353,7 +428,7 @@ data.essentiality |>
 data.reported |> 
   filter(section == "Overview") |> 
   mutate(percReported = round(percReported, 2)) |> 
-  pivot_longer(cols = responses.reported, values_to = "count", names_to = "report") |> 
+  pivot_longer(cols = all_of(responses.reported), values_to = "count", names_to = "report") |> 
   mutate(name = factor(name, levels = rev(orderOverview$name))) |> 
   ggbarplot(y = "percReported", x = "continent", fill = "continent", alpha = "report", facet.by = "name", palette = palContinents, ncol = 1,
             rotate = T, order = names(palContinents), panel.labs = list(name = rev(orderOverview$label)),
